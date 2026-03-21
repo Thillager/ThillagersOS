@@ -1,168 +1,250 @@
-import javax.swing.*;
-    import javax.swing.border.*;
-    import javax.swing.text.*;
-    import javax.swing.event.DocumentEvent;
-    import javax.swing.event.DocumentListener;
-    import javax.swing.tree.*;
-    import java.awt.*;
-    import java.awt.event.*;
-    import java.io.*;
-    import java.net.*;
-    import java.nio.file.*;
-    import java.text.SimpleDateFormat;
-    import java.util.*;
-    import java.util.List;
-    import java.util.jar.*;
-    import javax.tools.*;
-    import java.awt.dnd.DropTarget;
-    import java.awt.dnd.DropTargetDropEvent;
-    import java.awt.dnd.DnDConstants;
-    import java.awt.datatransfer.DataFlavor;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Cursor;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.Graphics;
+import java.awt.GridLayout;
+import java.awt.Image;
+import java.awt.Point;
+import java.awt.Toolkit;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.jar.Attributes;
+import java.util.jar.JarEntry;
+import java.util.jar.JarOutputStream;
+import java.util.jar.Manifest;
 
-    // ================= MAIN OS CLASS =================
-    public class Main extends JFrame {
+import javax.swing.AbstractAction;
+import javax.swing.BoxLayout;
+import javax.swing.DefaultListModel;
+import javax.swing.ImageIcon;
+import javax.swing.JButton;
+import javax.swing.JDesktopPane;
+import javax.swing.JDialog;
+import javax.swing.JEditorPane;
+import javax.swing.JFrame;
+import javax.swing.JInternalFrame;
+import javax.swing.JLabel;
+import javax.swing.JLayeredPane;
+import javax.swing.JList;
+import javax.swing.JMenu;
+import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
+import javax.swing.JProgressBar;
+import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
+import javax.swing.JTextField;
+import javax.swing.JToolBar;
+import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
+import javax.swing.border.BevelBorder;
+import javax.swing.border.EmptyBorder;
+import javax.swing.border.LineBorder;
+import javax.swing.border.TitledBorder;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+import javax.swing.event.InternalFrameAdapter;
+import javax.swing.event.InternalFrameEvent;
+import javax.tools.JavaCompiler;
+import javax.tools.ToolProvider;
 
-        public static Color currentBg = new Color(30, 30, 30);
-        public static Color accentColor = new Color(0, 120, 215);
-        public static Color taskbarColor = new Color(20, 20, 20);
-        public static Color textColor = Color.WHITE;
-        public static String currentTheme = "Win10";
-        public static String wallpaperPath = "";
+// ================= MAIN OS CLASS =================
+public class Main extends JFrame {
 
-        public static Image wallpaper = null;
-        private static JPanel taskIconsPanel;
-        public static JPanel desktop; 
-        private static JLayeredPane lp;
-        public static final String VM_DIR = "VM_Disk";
-        private static int windowOffset = 0; 
-        private static Map<JFrame, JButton> windowToButtonMap = new HashMap<>();
-        private static JPanel taskbar;
-        private StartMenu customStartMenu;
+    public static Color currentBg = new Color(30, 30, 30);
+    public static Color accentColor = new Color(0, 120, 215);
+    public static Color taskbarColor = new Color(20, 20, 20);
+    public static Color textColor = Color.WHITE;
+    public static String currentTheme = "Win10";
+    public static String wallpaperPath = "";
 
-        public static Properties systemProps = new Properties();
-        public static long timeOffsetMillis = 0;
-        public static List<File> customShortcuts = new ArrayList<>();
+    public static Image wallpaper = null;
+    private static JPanel taskIconsPanel;
+    public static JDesktopPane desktop;
+    private static JLayeredPane lp;
+    public static final String VM_DIR = "VM_Disk";
+    private static int windowOffset = 0; 
+    private static Map<JInternalFrame, JButton> windowToButtonMap = new HashMap<>();
+    private static JPanel taskbar;
+    private StartMenu customStartMenu;
 
-        public Main() {
-            File vmDir = new File(VM_DIR);
-            if(!vmDir.exists()) vmDir.mkdir();
+    public static Properties systemProps = new Properties();
+    public static long timeOffsetMillis = 0;
+    public static List<File> customShortcuts = new ArrayList<>();
 
-            setTitle("Thillagers OS - Ultimate Complete Edition");
-            setUndecorated(true);
-            Dimension sz = Toolkit.getDefaultToolkit().getScreenSize();
-            setSize(sz.width, sz.height);
-            setLocation(0, 0);
-            setDefaultCloseOperation(EXIT_ON_CLOSE);
+    public Main() {
+        File vmDir = new File(VM_DIR);
+        if(!vmDir.exists()) vmDir.mkdir();
 
-            lp = new JLayeredPane();
-            setContentPane(lp);
-            lp.setLayout(null);
+        setTitle("Thillagers OS");
+        // DEIN WUNSCH: Rahmen anlassen für einfaches Programmieren
+        setUndecorated(false); 
+        
+        Dimension sz = Toolkit.getDefaultToolkit().getScreenSize();
+        setSize(sz.width, sz.height);
+        setLocation(0, 0);
+        setDefaultCloseOperation(EXIT_ON_CLOSE);
 
-            desktop = new JPanel(null) {
-                @Override
-                protected void paintComponent(Graphics g) {
-                    super.paintComponent(g);
-                    if (wallpaper != null) {
-                        g.drawImage(wallpaper, 0, 0, getWidth(), getHeight(), this);
-                    } else {
-                        g.setColor(currentBg);
-                        g.fillRect(0, 0, getWidth(), getHeight());
-                    }
-                }
-            };
-            desktop.setBounds(0, 0, sz.width, sz.height);
-            lp.add(desktop, JLayeredPane.DEFAULT_LAYER);
+        lp = new JLayeredPane();
+        setContentPane(lp);
+        lp.setLayout(null);
 
-            taskbar = new JPanel(new BorderLayout());
-            taskbar.setBounds(0, sz.height - 55, sz.width, 55);
-            taskbar.setBackground(taskbarColor);
-            lp.add(taskbar, JLayeredPane.PALETTE_LAYER);
-
-            JButton startBtn = new JButton("START");
-            startBtn.setFocusPainted(false);
-            startBtn.addActionListener(e -> {
-                if (customStartMenu == null || !customStartMenu.isVisible()) {
-                    customStartMenu = new StartMenu(this);
-                    int menuY = (currentTheme.equals("macOS")) ? 50 : (getHeight() - 505);
-                    customStartMenu.showAt(0, menuY);
+        desktop = new JDesktopPane() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                if (wallpaper != null) {
+                    g.drawImage(wallpaper, 0, 0, getWidth(), getHeight(), this);
                 } else {
-                    customStartMenu.dispose();
+                    g.setColor(currentBg);
+                    g.fillRect(0, 0, getWidth(), getHeight());
                 }
-            });
-            taskbar.add(startBtn, BorderLayout.WEST);
+            }
+        };
+        desktop.setLayout(null);
+        // Position wird jetzt vom ComponentListener gesetzt
+        lp.add(desktop, JLayeredPane.DEFAULT_LAYER);
 
-            taskIconsPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
-            taskIconsPanel.setOpaque(false);
-            taskbar.add(taskIconsPanel, BorderLayout.CENTER);
+        taskbar = new JPanel(new BorderLayout());
+        taskbar.setBackground(taskbarColor);
+        lp.add(taskbar, JLayeredPane.PALETTE_LAYER);
 
-            JLabel timeLabel = new JLabel();
-            timeLabel.setForeground(Color.WHITE);
-            timeLabel.setBorder(new EmptyBorder(0, 0, 0, 20));
-            timeLabel.setCursor(new Cursor(Cursor.HAND_CURSOR));
-            timeLabel.addMouseListener(new MouseAdapter() {
-                public void mouseClicked(MouseEvent e) {
-                    String newTime = JOptionPane.showInputDialog("Uhrzeit einstellen (HH:mm):");
-                    if (newTime != null && newTime.matches("\\d{1,2}:\\d{2}")) {
-                        try {
-                            String[] parts = newTime.split(":");
-                            Calendar cal = Calendar.getInstance();
-                            cal.set(Calendar.HOUR_OF_DAY, Integer.parseInt(parts[0]));
-                            cal.set(Calendar.MINUTE, Integer.parseInt(parts[1]));
-                            cal.set(Calendar.SECOND, 0);
-                            timeOffsetMillis = cal.getTimeInMillis() - System.currentTimeMillis();
-                            saveSettings();
-                        } catch (Exception ex) {}
-                    }
+        JButton startBtn = new JButton("START");
+        startBtn.setFocusPainted(false);
+        startBtn.addActionListener(e -> {
+            if (customStartMenu == null || !customStartMenu.isVisible()) {
+                customStartMenu = new StartMenu(this);
+                // Dynamische Berechnung des Y-Werts für das Startmenü
+                int h = getContentPane().getHeight();
+                int menuY = (currentTheme.equals("macOS")) ? 40 : (h - 450);
+                customStartMenu.showAt(0, menuY);
+            } else {
+                customStartMenu.dispose();
+            }
+        });
+        taskbar.add(startBtn, BorderLayout.WEST);
+
+        taskIconsPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        taskIconsPanel.setOpaque(false);
+        taskbar.add(taskIconsPanel, BorderLayout.CENTER);
+
+        JLabel timeLabel = new JLabel();
+        timeLabel.setForeground(Color.WHITE);
+        timeLabel.setBorder(new EmptyBorder(0, 0, 0, 20));
+        timeLabel.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        timeLabel.addMouseListener(new MouseAdapter() {
+            public void mouseClicked(MouseEvent e) {
+                String newTime = JOptionPane.showInputDialog("Uhrzeit einstellen (HH:mm):");
+                if (newTime != null && newTime.matches("\\d{1,2}:\\d{2}")) {
+                    try {
+                        String[] parts = newTime.split(":");
+                        Calendar cal = Calendar.getInstance();
+                        cal.set(Calendar.HOUR_OF_DAY, Integer.parseInt(parts[0]));
+                        cal.set(Calendar.MINUTE, Integer.parseInt(parts[1]));
+                        cal.set(Calendar.SECOND, 0);
+                        timeOffsetMillis = cal.getTimeInMillis() - System.currentTimeMillis();
+                        saveSettings();
+                    } catch (Exception ex) {}
                 }
-            });
-            new javax.swing.Timer(1000, e -> timeLabel.setText(new SimpleDateFormat("HH:mm:ss").format(new Date(System.currentTimeMillis() + timeOffsetMillis)))).start();
-            taskbar.add(timeLabel, BorderLayout.EAST);
-
-            loadSettings();
-            applyTheme(currentTheme);
-            if(!wallpaperPath.isEmpty()) setWallpaper(wallpaperPath);
-        }
-
-        public static ImageIcon loadIcon(String name) {
-            try {
-                return new ImageIcon(Main.class.getResource("/resources/" + name));
-            } catch (Exception e) {
-                return null;
             }
-        }
+        });
+        new javax.swing.Timer(1000, e -> timeLabel.setText(new SimpleDateFormat("HH:mm:ss").format(new Date(System.currentTimeMillis() + timeOffsetMillis)))).start();
+        taskbar.add(timeLabel, BorderLayout.EAST);
 
-        public void applyTheme(String theme) {
-            currentTheme = theme;
-            switch(theme) {
-                case "Win95":
-                    currentBg = new Color(0, 128, 128);
-                    taskbarColor = new Color(192, 192, 192);
-                    textColor = Color.BLACK;
-                    taskbar.setBounds(0, getHeight() - 40, getWidth(), 40);
-                    break;
-                case "macOS":
-                    currentBg = new Color(220, 220, 220);
-                    taskbarColor = new Color(255, 255, 255, 220);
-                    textColor = Color.BLACK;
-                    taskbar.setBounds(0, 0, getWidth(), 35);
-                    break;
-                case "Linux":
-                    currentBg = new Color(48, 10, 36);
-                    taskbarColor = new Color(30, 30, 30);
-                    textColor = Color.WHITE;
-                    taskbar.setBounds(0, getHeight() - 50, getWidth(), 50);
-                    break;
-                default: // Win10
-                    currentBg = new Color(30, 30, 30);
-                    taskbarColor = new Color(20, 20, 20);
-                    textColor = Color.WHITE;
-                    taskbar.setBounds(0, getHeight() - 55, getWidth(), 55);
-                    break;
+        loadSettings();
+        applyTheme(currentTheme);
+        if(!wallpaperPath.isEmpty()) setWallpaper(wallpaperPath);
+
+        // DER FIX: Automatisches Layout-Management für Rahmen-Modus
+        this.addComponentListener(new ComponentAdapter() {
+            @Override
+            public void componentResized(ComponentEvent e) {
+                // Nutze den Inhaltsbereich OHNE Rahmen/Titelbalken
+                int w = getContentPane().getWidth();
+                int h = getContentPane().getHeight();
+                
+                desktop.setBounds(0, 0, w, h);
+                
+                // Taskbar Höhe je nach Theme
+                int tbHeight = currentTheme.equals("Win95") ? 40 : 55;
+                
+                if(currentTheme.equals("macOS")) {
+                    taskbar.setBounds(0, 0, w, 35); // Oben beim Mac
+                } else {
+                    taskbar.setBounds(0, h - tbHeight, w, tbHeight); // Unten
+                }
+                
+                // Icons neu anordnen, falls das Fenster verkleinert wurde
+                initDesktopIcons(h);
             }
-            taskbar.setBackground(taskbarColor);
-            initDesktopIcons(getHeight());
-            saveSettings();
+        });
+    }
+
+    public void applyTheme(String theme) {
+        currentTheme = theme;
+        switch(theme) {
+            case "Win95":
+                currentBg = new Color(0, 128, 128);
+                taskbarColor = new Color(192, 192, 192);
+                textColor = Color.BLACK;
+                break;
+            case "macOS":
+                currentBg = new Color(220, 220, 220);
+                taskbarColor = new Color(255, 255, 255, 220);
+                textColor = Color.BLACK;
+                break;
+            case "Linux":
+                currentBg = new Color(48, 10, 36);
+                taskbarColor = new Color(30, 30, 30);
+                textColor = Color.WHITE;
+                break;
+            default: // Win10
+                currentBg = new Color(30, 30, 30);
+                taskbarColor = new Color(20, 20, 20);
+                textColor = Color.WHITE;
+                break;
         }
+        taskbar.setBackground(taskbarColor);
+        
+        // WICHTIG: Kein hartes setBounds hier, der ComponentListener macht das beim Repaint
+        revalidate();
+        repaint();
+    }
 
         private void initDesktopIcons(int screenHeight) {
             desktop.removeAll();
@@ -226,6 +308,28 @@ import javax.swing.*;
             saveSettings();
         }
 
+        private static ImageIcon getIconFor(String title) {
+    String path;
+    switch (title.toLowerCase()) {
+        case "terminal": path = "/terminal.PNG"; break;
+        case "explorer": path = "/explorer.PNG"; break;
+        case "app store": path = "/store.PNG"; break;
+        case "browser": path = "/browser.JPG"; break; // JPG -> PNG empfohlen
+        default:
+            if(title.endsWith(".jar")) path = "/icons/jar.png";
+            else path = "/icons/file.png";
+    }
+
+    URL url = Main.class.getResource(path);
+    if (url == null) return null;
+
+    System.out.println("Lade Icon: " + path + " -> " + url);
+
+    ImageIcon icon = new ImageIcon(url);
+    Image scaled = icon.getImage().getScaledInstance(48, 48, Image.SCALE_SMOOTH);
+    return new ImageIcon(scaled);
+}
+
         public static void addDesktopIcon(String title, int defaultX, int defaultY, ActionListener action) {
             JPanel p = new JPanel(new BorderLayout());
             p.setOpaque(false);
@@ -246,7 +350,15 @@ import javax.swing.*;
             String labelText = title.endsWith(".jar") ? "[JAR]" : (title.endsWith(".java") ? "[JAVA]" : (title.contains(".") ? "[FILE]" : "[DIR]"));
             if(title.equals("Terminal") || title.equals("Explorer") || title.equals("App Store") || title.equals("Browser")) labelText = "[APP]";
 
-            JLabel img = new JLabel(labelText, SwingConstants.CENTER);
+            ImageIcon icon = getIconFor(title);
+
+JLabel img;
+if (icon != null) {
+    img = new JLabel(icon);
+} else {
+    img = new JLabel(labelText, SwingConstants.CENTER); // fallback
+}
+
             img.setFont(new Font("Monospaced", Font.BOLD, 18));
             img.setForeground(textColor);
             img.setBorder(new LineBorder(textColor, 1));
@@ -275,26 +387,49 @@ import javax.swing.*;
             desktop.add(p);
         }
 
-        public static void openApp(JFrame app) {
-            app.setLocation(100 + windowOffset, 80 + windowOffset);
-            windowOffset = (windowOffset + 30) % 300;
-            app.setVisible(true);
-            app.toFront();
+       public static void openApp(JInternalFrame app) {
+    app.setLocation(100 + windowOffset, 80 + windowOffset);
+    windowOffset = (windowOffset + 30) % 300;
 
-            JButton tBtn = new JButton(app.getTitle());
-            tBtn.addActionListener(e -> { app.setVisible(true); app.toFront(); });
-            taskIconsPanel.add(tBtn);
-            windowToButtonMap.put(app, tBtn);
+    desktop.add(app);
+    app.setVisible(true);
+    try { app.setSelected(true); } catch (Exception e) {}
+
+    // TASKBAR-ICON: gleiche Icon wie Desktop
+    ImageIcon icon = getIconFor(app.getTitle());
+JButton tBtn = new JButton();
+if(icon != null) {
+    tBtn.setIcon(icon);
+} else {
+    tBtn.setText(app.getTitle());
+}
+System.out.println("Erstelle Taskbar-Icon für: " + app.getTitle() + " -> " + (icon != null ? "Icon gefunden" : "Kein Icon, Text verwendet"));
+
+    tBtn.setPreferredSize(new Dimension(48,48)); // auf Icon-Größe anpassen
+    tBtn.setBorderPainted(false);
+    tBtn.setContentAreaFilled(false);
+    tBtn.setFocusPainted(false);
+    tBtn.setToolTipText(app.getTitle());
+
+    tBtn.addActionListener(e -> {
+        try {
+            if(app.isIcon()) { app.setIcon(false); app.setSelected(true); }
+            else app.setIcon(true);
+        } catch (Exception ex) {}
+    });
+
+    taskIconsPanel.add(tBtn);
+    taskIconsPanel.revalidate();
+    taskIconsPanel.repaint();
+
+    app.addInternalFrameListener(new InternalFrameAdapter() {
+        public void internalFrameClosed(InternalFrameEvent e) {
+            taskIconsPanel.remove(tBtn);
             taskIconsPanel.revalidate();
-
-            app.addWindowListener(new WindowAdapter() {
-                public void windowClosing(WindowEvent e) {
-                    taskIconsPanel.remove(windowToButtonMap.get(app));
-                    taskIconsPanel.revalidate();
-                    taskIconsPanel.repaint();
-                }
-            });
+            taskIconsPanel.repaint();
         }
+    });
+}
 
         public static void saveSettings() {
             try (OutputStream out = new FileOutputStream("system.cfg")) {
@@ -423,7 +558,7 @@ import javax.swing.*;
     }
 
     // ================= EXPLORER =================
-    class ExplorerApp extends JFrame {
+    class ExplorerApp extends JInternalFrame {
         private DefaultListModel<File> model = new DefaultListModel<>();
         private JList<File> list = new JList<>(model);
         private File currentPath = new File(Main.VM_DIR);
@@ -431,7 +566,7 @@ import javax.swing.*;
         private static boolean isCutOperation = false;
 
         public ExplorerApp() {
-            setTitle("File Explorer");
+            super("Explorer", true, true, true, true);
             setSize(700, 500);
             setLayout(new BorderLayout());
 
@@ -623,9 +758,10 @@ import javax.swing.*;
         }
     }
     // ================= APP STORE =================
-    class AppStore extends JFrame {
+    class AppStore extends JInternalFrame {
         public AppStore() {
-            setTitle("App Store"); setSize(450, 550); setLayout(new BorderLayout());
+            super("App Store", true, true, true, true);
+            setSize(400, 500);
             JPanel listPanel = new JPanel();
             listPanel.setLayout(new BoxLayout(listPanel, BoxLayout.Y_AXIS));
             addAppEntry(listPanel, "Snake Game", "https://example.com/snake.jar");
@@ -657,39 +793,105 @@ import javax.swing.*;
     }
 
     // ================= BROWSER =================
-    class BrowserApp extends JFrame {
-        public BrowserApp() {
-            setTitle("Web Browser"); setSize(600, 200); setLayout(new FlowLayout());
-            JTextField urlField = new JTextField("https://", 35);
-            JButton goBtn = new JButton("[GO]");
-            JButton dlBtn = new JButton("[DL]");
-            JProgressBar progress = new JProgressBar(0, 100);
-            goBtn.addActionListener(e -> { try { Desktop.getDesktop().browse(new URI(urlField.getText())); } catch(Exception ex){} });
-            dlBtn.addActionListener(e -> {
-                progress.setValue(10);
-                new Thread(() -> {
-                    try {
-                        URL url = new URL(urlField.getText());
-                        String n = urlField.getText().substring(urlField.getText().lastIndexOf('/') + 1);
-                        if(n.isEmpty()) n = "dl_" + System.currentTimeMillis();
-                        Files.copy(url.openStream(), new File(Main.VM_DIR, n).toPath(), StandardCopyOption.REPLACE_EXISTING);
-                        SwingUtilities.invokeLater(() -> { progress.setValue(100); JOptionPane.showMessageDialog(this, "Fertig!"); });
-                    } catch(Exception ex) { SwingUtilities.invokeLater(() -> progress.setValue(0)); }
-                }).start();
+    class BrowserApp extends JInternalFrame {
+    private JTextField urlField;
+    private JButton goBtn, dlBtn;
+    private JProgressBar progress;
+    private JEditorPane displayPane;
+
+    public BrowserApp() {
+        super("Web Browser", true, true, true, true);
+        setSize(800, 600);
+        setLayout(new BorderLayout());
+
+        // --- Top Panel: URL + Buttons ---
+        urlField = new JTextField("https://", 40);
+        goBtn = new JButton("[GO]");
+        dlBtn = new JButton("[DL]");
+        progress = new JProgressBar(0, 100);
+
+        JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        topPanel.add(urlField);
+        topPanel.add(goBtn);
+        topPanel.add(dlBtn);
+        topPanel.setBackground(new Color(60,60,60));
+        add(topPanel, BorderLayout.NORTH);
+        add(progress, BorderLayout.SOUTH);
+
+        // --- Display Panel ---
+        displayPane = new JEditorPane();
+        displayPane.setEditable(false);
+        displayPane.setContentType("text/html"); // HTML anzeigen
+        JScrollPane scrollPane = new JScrollPane(displayPane);
+        add(scrollPane, BorderLayout.CENTER);
+
+        // --- Styling ---
+        urlField.setBackground(Color.WHITE);
+        goBtn.setBackground(new Color(80,80,80));
+        goBtn.setForeground(Color.WHITE);
+        dlBtn.setBackground(new Color(80,80,80));
+        dlBtn.setForeground(Color.WHITE);
+
+        // --- GO Button: Webseite anzeigen ---
+        goBtn.addActionListener(e -> loadURL(urlField.getText()));
+
+        // --- Download Button ---
+        dlBtn.addActionListener(e -> {
+    new Thread(() -> {
+        try {
+            URL url = new URL(urlField.getText());
+            String tempName = urlField.getText().substring(urlField.getText().lastIndexOf('/') + 1);
+            final String fileName = tempName.isEmpty() ? "dl_" + System.currentTimeMillis() : tempName;
+
+            File targetFile = new File(Main.VM_DIR, fileName);
+
+            // Download mit Stream
+            try (InputStream in = url.openStream(); 
+                 OutputStream out = new FileOutputStream(targetFile)) {
+                byte[] buffer = new byte[4096];
+                int bytesRead;
+                while ((bytesRead = in.read(buffer)) != -1) {
+                    out.write(buffer, 0, bytesRead);
+                }
+            }
+
+            SwingUtilities.invokeLater(() -> {
+                progress.setValue(100);
+                JOptionPane.showMessageDialog(BrowserApp.this, "Download fertig: " + fileName);
             });
-            add(urlField); add(goBtn); add(dlBtn); add(progress);
+
+        } catch(Exception ex) {
+            SwingUtilities.invokeLater(() -> {
+                progress.setValue(0);
+                JOptionPane.showMessageDialog(BrowserApp.this, "Fehler beim Download:\n" + ex.getMessage());
+            });
         }
+    }).start();
+});
     }
 
+
+    private void loadURL(String urlStr) {
+        new Thread(() -> {
+            try {
+                displayPane.setPage(urlStr); // im internen Fenster laden
+            } catch(Exception e) {
+                SwingUtilities.invokeLater(() -> displayPane.setText("<html><body><h2>Fehler beim Laden</h2></body></html>"));
+            }
+        }).start();
+    }
+}
+
+
     // ================= TOOLS =================
-class TerminalApp extends JFrame {
+class TerminalApp extends JInternalFrame {
     private JTextArea area;
     private JTextField input;
     private Process process;
     private BufferedWriter writer;
 
     public TerminalApp(File dir) {
-        setTitle("Terminal"); 
+        super("Terminal", true, true, true, true); // WICHTIG: Titel + Resizable, Closable, Maximizable, Iconifiable
         setSize(600, 400);
 
         area = new JTextArea();
@@ -715,7 +917,7 @@ class TerminalApp extends JFrame {
                 pb = new ProcessBuilder("/bin/bash");
             }
 
-            pb.directory(new File(Main.VM_DIR));
+            pb.directory(dir); // Nutze übergebenes Verzeichnis
             process = pb.start();
 
             writer = new BufferedWriter(new OutputStreamWriter(process.getOutputStream()));
@@ -737,6 +939,8 @@ class TerminalApp extends JFrame {
                 area.append("Fehler beim Senden\n");
             }
         });
+
+        setVisible(true); // WICHTIG: sonst wird Fenster nicht angezeigt
     }
 
     private void readStream(InputStream is) {
@@ -748,23 +952,24 @@ class TerminalApp extends JFrame {
             }
         } catch (Exception e) {}
     }
-}    
-    class ImageViewer extends JFrame {
+}
+    class ImageViewer extends JInternalFrame {
         public ImageViewer(File f) {
-            setTitle("Image: " + f.getName()); setSize(600, 600);
+            super("Image Viewer", true, true, true, true);
+            setSize(600, 500);
             add(new JScrollPane(new JLabel(new ImageIcon(f.getAbsolutePath()))));
         }
     }
 
     // ================= TEXT EDITOR (ENHANCED) =================
-    class TextEditor extends JFrame {
+    class TextEditor extends JInternalFrame {
         private JTextArea area;
         private File currentFile;
 
         public TextEditor() { this(null); }
         public TextEditor(File f) {
+            super("Text Editor", true, true, true, true);
             this.currentFile = f;
-            setTitle("Advanced Editor");
             setSize(600, 500);
             area = new JTextArea();
             area.setFont(new Font("Monospaced", Font.PLAIN, 13));
@@ -805,7 +1010,6 @@ class TerminalApp extends JFrame {
             try {
                 currentFile = f;
                 area.setText(new String(Files.readAllBytes(f.toPath())));
-                setTitle("Editor: " + f.getName());
             } catch(Exception e){ JOptionPane.showMessageDialog(this, "Fehler beim Laden."); }
         }
 
@@ -817,7 +1021,6 @@ class TerminalApp extends JFrame {
             }
             try {
                 Files.write(currentFile.toPath(), area.getText().getBytes());
-                setTitle("Editor: " + currentFile.getName());
                 JOptionPane.showMessageDialog(this, "Gespeichert!");
             } catch(Exception ex){ JOptionPane.showMessageDialog(this, "Fehler beim Speichern."); }
         }
