@@ -112,8 +112,8 @@ public class Main extends JFrame {
         if(!vmDir.exists()) vmDir.mkdir();
 
         setTitle("Thillagers OS");
-        // DEIN WUNSCH: Rahmen anlassen für einfaches Programmieren
-        setUndecorated(false); 
+        setUndecorated(false);
+         
         
         Dimension sz = Toolkit.getDefaultToolkit().getScreenSize();
         setSize(sz.width, sz.height);
@@ -323,8 +323,6 @@ public class Main extends JFrame {
     URL url = Main.class.getResource(path);
     if (url == null) return null;
 
-    System.out.println("Lade Icon: " + path + " -> " + url);
-
     ImageIcon icon = new ImageIcon(url);
     Image scaled = icon.getImage().getScaledInstance(48, 48, Image.SCALE_SMOOTH);
     return new ImageIcon(scaled);
@@ -403,7 +401,6 @@ if(icon != null) {
 } else {
     tBtn.setText(app.getTitle());
 }
-System.out.println("Erstelle Taskbar-Icon für: " + app.getTitle() + " -> " + (icon != null ? "Icon gefunden" : "Kein Icon, Text verwendet"));
 
     tBtn.setPreferredSize(new Dimension(48,48)); // auf Icon-Größe anpassen
     tBtn.setBorderPainted(false);
@@ -432,28 +429,53 @@ System.out.println("Erstelle Taskbar-Icon für: " + app.getTitle() + " -> " + (i
 }
 
         public static void saveSettings() {
-            try (OutputStream out = new FileOutputStream("system.cfg")) {
-                systemProps.setProperty("theme", currentTheme);
-                systemProps.setProperty("wallpaper", wallpaperPath);
-                systemProps.setProperty("timeOffset", String.valueOf(timeOffsetMillis));
+    try (OutputStream out = new FileOutputStream("system.cfg")) {
+        // Grund-Einstellungen
+        systemProps.setProperty("theme", currentTheme);
+        systemProps.setProperty("timeOffset", String.valueOf(timeOffsetMillis));
 
-                if (desktop != null) {
-                    for (Component c : desktop.getComponents()) {
-                        if (c.getName() != null && c.getName().startsWith("ICON_")) {
-                            systemProps.setProperty("pos_" + c.getName(), c.getX() + "," + c.getY());
-                        }
-                    }
-                }
-
-                StringBuilder sb = new StringBuilder();
-                for (File f : customShortcuts) {
-                    sb.append(f.getAbsolutePath()).append(";");
-                }
-                systemProps.setProperty("shortcuts", sb.toString());
-
-                systemProps.store(out, "System Settings");
-            } catch (IOException e) {}
+        // Wallpaper relativ speichern
+        if (!wallpaperPath.isEmpty()) {
+            try {
+                File vmDir = new File(VM_DIR);
+                String relativeWallpaper = vmDir.toPath().relativize(new File(wallpaperPath).toPath()).toString();
+                systemProps.setProperty("wallpaper", relativeWallpaper);
+            } catch(Exception ex) {
+                System.err.println("Fehler beim Speichern des Wallpapers: " + wallpaperPath);
+            }
+        } else {
+            systemProps.setProperty("wallpaper", "");
         }
+
+        // Desktop-Icon-Positionen speichern
+        if (desktop != null) {
+            for (Component c : desktop.getComponents()) {
+                if (c.getName() != null && c.getName().startsWith("ICON_")) {
+                    systemProps.setProperty("pos_" + c.getName(), c.getX() + "," + c.getY());
+                }
+            }
+        }
+
+        // Shortcuts relativ zum VM-Ordner speichern
+        StringBuilder sb = new StringBuilder();
+        File vmDir = new File(VM_DIR);
+        for (File f : customShortcuts) {
+            try {
+                String relative = vmDir.toPath().relativize(f.toPath()).toString();
+                sb.append(relative).append(";");
+            } catch(Exception ex) {
+                System.err.println("Fehler beim Speichern des Shortcuts: " + f.getAbsolutePath());
+            }
+        }
+        systemProps.setProperty("shortcuts", sb.toString());
+
+        // In die Datei schreiben
+        systemProps.store(out, "System Settings");
+
+    } catch (IOException e) {
+        System.err.println("Fehler beim Speichern der Einstellungen: " + e.getMessage());
+    }
+}
 
         private void loadSettings() {
             try (InputStream in = new FileInputStream("system.cfg")) {
