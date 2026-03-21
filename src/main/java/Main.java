@@ -518,14 +518,28 @@ term.getInputField().postActionEvent();
 
         private static ImageIcon getIconFor(String title) {
     String path;
+
+            if(currentTheme.equals("macOS")) {
+    switch (title.toLowerCase()) {
+        case "terminal": path = "resources/terminal.PNG"; break;
+        case "explorer": path = "resources/explorer.PNG"; break;
+        case "app store": path = "resources/store.jpeg"; break;
+        case "browser": path = "resources/browser.JPG"; break;
+        default:
+            if(title.endsWith(".jar")) path = "resources/jar.jpeg";
+            else path = "resources/file.png";
+    }
+            } else {
+        
     switch (title.toLowerCase()) {
         case "terminal": path = "/terminal.PNG"; break;
         case "explorer": path = "/explorer.PNG"; break;
-        case "app store": path = "/store.PNG"; break;
-        case "browser": path = "/browser.JPG"; break; // JPG -> PNG empfohlen
+        case "app store": path = "/store.jpeg"; break;
+        case "browser": path = "/browser.JPG"; break;
         default:
-            if(title.endsWith(".jar")) path = "/icons/jar.png";
-            else path = "/icons/file.png";
+            if(title.endsWith(".jar")) path = "/jar.jpeg";
+            else path = "/file.png";
+    }
     }
 
     URL url = Main.class.getResource(path);
