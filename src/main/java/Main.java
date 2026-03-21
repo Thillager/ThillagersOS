@@ -100,7 +100,7 @@ public class Main extends JFrame {
     public static final String VM_DIR = "VM_Disk";
     private static int windowOffset = 0; 
     private static Map<JInternalFrame, JButton> windowToButtonMap = new HashMap<>();
-    private static JPanel taskbar;
+    public static JPanel taskbar;
     private StartMenu customStartMenu;
 
     public static Properties systemProps = new Properties();
@@ -113,7 +113,7 @@ public class Main extends JFrame {
 
         setTitle("Thillagers OS");
         setUndecorated(false);
-         
+        setExtendedState(JFrame.MAXIMIZED_BOTH);
         
         Dimension sz = Toolkit.getDefaultToolkit().getScreenSize();
         setSize(sz.width, sz.height);
@@ -190,96 +190,257 @@ public class Main extends JFrame {
         applyTheme(currentTheme);
         if(!wallpaperPath.isEmpty()) setWallpaper(wallpaperPath);
 
-        // DER FIX: Automatisches Layout-Management für Rahmen-Modus
         this.addComponentListener(new ComponentAdapter() {
-            @Override
-            public void componentResized(ComponentEvent e) {
-                // Nutze den Inhaltsbereich OHNE Rahmen/Titelbalken
-                int w = getContentPane().getWidth();
-                int h = getContentPane().getHeight();
-                
-                desktop.setBounds(0, 0, w, h);
-                
-                // Taskbar Höhe je nach Theme
-                int tbHeight = currentTheme.equals("Win95") ? 40 : 55;
-                
-                if(currentTheme.equals("macOS")) {
-                    taskbar.setBounds(0, 0, w, 35); // Oben beim Mac
-                } else {
-                    taskbar.setBounds(0, h - tbHeight, w, tbHeight); // Unten
-                }
-                
-                // Icons neu anordnen, falls das Fenster verkleinert wurde
-                initDesktopIcons(h);
-            }
-        });
+    @Override
+    public void componentResized(ComponentEvent e) {
+        int w = getContentPane().getWidth();
+        int h = getContentPane().getHeight();
+
+        desktop.setBounds(0, 0, w, h);
+
+        int tbHeight;
+        int tbY;
+
+        switch(currentTheme) {
+            case "macOS":
+                tbHeight = 35;
+                tbY = 0; // oben
+                break;
+            case "Win95":
+                tbHeight = 40;
+                tbY = h - tbHeight; // unten
+                break;
+            default: // Win10, Linux
+                tbHeight = 55;
+                tbY = h - tbHeight; // unten
+                break;
+        }
+
+        taskbar.setBounds(0, tbY, w, tbHeight);
+
+        // Desktop-Icons dynamisch positionieren
+        int iconYStart = (currentTheme.equals("macOS")) ? tbHeight + 10 : 40;
+        initDesktopIcons(h - tbHeight, iconYStart);
+
+        taskbar.repaint();
+    }
+});
     }
 
     public void applyTheme(String theme) {
-        currentTheme = theme;
-        switch(theme) {
-            case "Win95":
-                currentBg = new Color(0, 128, 128);
-                taskbarColor = new Color(192, 192, 192);
-                textColor = Color.BLACK;
-                break;
-            case "macOS":
-                currentBg = new Color(220, 220, 220);
-                taskbarColor = new Color(255, 255, 255, 220);
-                textColor = Color.BLACK;
-                break;
-            case "Linux":
-                currentBg = new Color(48, 10, 36);
-                taskbarColor = new Color(30, 30, 30);
-                textColor = Color.WHITE;
-                break;
-            default: // Win10
-                currentBg = new Color(30, 30, 30);
-                taskbarColor = new Color(20, 20, 20);
-                textColor = Color.WHITE;
-                break;
-        }
-        taskbar.setBackground(taskbarColor);
-        
-        // WICHTIG: Kein hartes setBounds hier, der ComponentListener macht das beim Repaint
-        revalidate();
-        repaint();
+    currentTheme = theme;
+
+    // Farben & Schriftarten
+    Color bgColor, taskbarBg, textCol, iconBorder;
+    Font defaultFont;
+
+    switch (theme) {
+        case "Win95":
+            bgColor = new Color(192, 192, 192); // klassisches Grau
+            taskbarBg = new Color(192, 192, 192);
+            textCol = Color.BLACK;
+            iconBorder = Color.BLACK;
+            defaultFont = new Font("MS Sans Serif", Font.PLAIN, 12);
+            break;
+
+        case "Win10":
+            bgColor = new Color(30, 30, 30);
+            taskbarBg = new Color(20, 20, 20);
+            textCol = Color.WHITE;
+            iconBorder = Color.WHITE;
+            defaultFont = new Font("Segoe UI", Font.PLAIN, 13);
+            break;
+
+        case "macOS":
+            bgColor = new Color(220, 220, 220);
+            taskbarBg = new Color(255, 255, 255, 220); // leicht transparent
+            textCol = Color.BLACK;
+            iconBorder = Color.GRAY;
+            defaultFont = new Font("San Francisco", Font.PLAIN, 13);
+            break;
+
+        case "Linux":
+            bgColor = new Color(48, 10, 36);
+            taskbarBg = new Color(30, 30, 30);
+            textCol = Color.WHITE;
+            iconBorder = Color.WHITE;
+            defaultFont = new Font("Ubuntu", Font.PLAIN, 13);
+            break;
+
+        default: // Fallback Win10
+            bgColor = new Color(30, 30, 30);
+            taskbarBg = new Color(20, 20, 20);
+            textCol = Color.WHITE;
+            iconBorder = Color.WHITE;
+            defaultFont = new Font("Segoe UI", Font.PLAIN, 13);
     }
 
-        private void initDesktopIcons(int screenHeight) {
-            desktop.removeAll();
-            int yOff = (currentTheme.equals("macOS")) ? 50 : 40;
-            addDesktopIcon("Terminal", 40, yOff, e -> openApp(new TerminalApp(new File(VM_DIR))));
-            addDesktopIcon("Explorer", 40, yOff + 120, e -> openApp(new ExplorerApp()));
-            addDesktopIcon("App Store", 40, yOff + 240, e -> openApp(new AppStore()));
-            addDesktopIcon("Browser", 40, yOff + 480, e -> openApp(new BrowserApp()));
+   // Explorer & andere interne Fenster
+for (JInternalFrame frame : desktop.getAllFrames()) {
+    if (frame instanceof ExplorerApp) {
+        ((ExplorerApp)frame).applyTheme(currentTheme);
+    } else {
+        // Terminal, TextEditor, AppStore, Browser
+        frame.getContentPane().setBackground(bgColor);
+        for (Component c : frame.getContentPane().getComponents()) {
+            c.setBackground(bgColor);
+            c.setForeground(textCol);
+            c.setFont(defaultFont);
+        }
+    }
+}
 
-            File dir = new File(VM_DIR);
-            File[] files = dir.listFiles();
-            int startX = 160;
-            int startY = yOff;
-            if(files != null) {
-                Arrays.sort(files);
-                for(File f : files) {
-                    if(f.getName().endsWith(".jar")) {
-                        addDesktopIcon(f.getName(), startX, startY, e -> runJar(f));
-                        startY += 120;
-                        if(startY > screenHeight - 200) { startY = yOff; startX += 120; }
+    // Globale Farben
+    currentBg = bgColor;
+    taskbarColor = taskbarBg;
+    textColor = textCol;
+
+    // --- Taskbar ---
+    taskbar.setBackground(taskbarBg);
+
+    for (Component c : taskbar.getComponents()) {
+        c.setForeground(textCol);
+        c.setFont(defaultFont);
+        if (c instanceof JButton) {
+            JButton btn = (JButton)c;
+            btn.setBackground(taskbarBg);
+            btn.setForeground(textCol);
+        }
+    }
+
+    // --- Desktop-Icons ---
+    if(desktop != null) {
+        for(Component c : desktop.getComponents()) {
+            if(c instanceof JPanel) {
+                JPanel p = (JPanel)c;
+                for(Component inner : p.getComponents()) {
+                    if(inner instanceof JLabel) {
+                        JLabel label = (JLabel)inner;
+                        label.setForeground(textCol);
+                        label.setFont(defaultFont.deriveFont(Font.BOLD, 12));
+                        label.setBorder(new LineBorder(iconBorder, 1));
+                    }
+                    if(inner instanceof JButton) {
+                        JButton btn = (JButton)inner;
+                        btn.setForeground(textCol);
+                        btn.setFont(defaultFont.deriveFont(Font.PLAIN, 10));
+                        btn.setBackground(bgColor);
                     }
                 }
             }
+        }
+    }
 
-            for(File f : customShortcuts) {
-                if(f.exists()) {
-                    addDesktopIcon(f.getName(), startX, startY, e -> executeFile(f));
-                    startY += 120;
-                    if(startY > screenHeight - 200) { startY = yOff; startX += 120; }
+    // --- StartMenu ---
+    if(customStartMenu != null) {
+        customStartMenu.getContentPane().setBackground(bgColor);
+        for(Component c : customStartMenu.getContentPane().getComponents()) {
+            c.setForeground(textCol);
+            c.setFont(defaultFont);
+            c.setBackground(bgColor);
+            if(c instanceof JPanel) {
+                for(Component inner : ((JPanel)c).getComponents()) {
+                    inner.setForeground(textCol);
+                    inner.setFont(defaultFont);
+                    inner.setBackground(bgColor);
                 }
             }
-
-            desktop.revalidate();
-            desktop.repaint();
         }
+    }
+
+    // --- Explorer, Terminal, TextEditor ---
+    for(JInternalFrame frame : desktop.getAllFrames()) {
+        frame.getContentPane().setBackground(bgColor);
+        for(Component c : frame.getContentPane().getComponents()) {
+            c.setForeground(textCol);
+            c.setFont(defaultFont);
+            c.setBackground(bgColor);
+            if(c instanceof JScrollPane) {
+                JScrollPane sp = (JScrollPane)c;
+                if(sp.getViewport().getView() instanceof JTextArea) {
+                    JTextArea ta = (JTextArea)sp.getViewport().getView();
+                    ta.setBackground(bgColor);
+                    ta.setForeground(textCol);
+                    ta.setFont(defaultFont);
+                }
+                if(sp.getViewport().getView() instanceof JLabel) {
+                    JLabel l = (JLabel)sp.getViewport().getView();
+                    l.setForeground(textCol);
+                    l.setFont(defaultFont);
+                }
+            }
+            if(c instanceof JToolBar) {
+                JToolBar tb = (JToolBar)c;
+                tb.setBackground(bgColor);
+                for(Component btn : tb.getComponents()) {
+                    if(btn instanceof JButton) {
+                        JButton b = (JButton)btn;
+                        b.setForeground(textCol);
+                        b.setBackground(bgColor);
+                        b.setFont(defaultFont);
+                    }
+                }
+            }
+        }
+    }
+Dimension sz = getContentPane().getSize();
+    int tbHeight, tbY;
+    switch(currentTheme) {
+        case "macOS":
+            tbHeight = 35;
+            tbY = 0; // oben
+            break;
+        case "Win95":
+            tbHeight = 40;
+            tbY = sz.height - tbHeight; // unten
+            break;
+        default: // Win10, Linux
+            tbHeight = 55;
+            tbY = sz.height - tbHeight; // unten
+            break;
+    }
+    taskbar.setBounds(0, tbY, sz.width, tbHeight);
+    taskbar.repaint();
+    revalidate();
+    repaint();
+}
+
+        private void initDesktopIcons(int screenHeight, int yOffset) {
+    desktop.removeAll();
+
+    addDesktopIcon("Terminal", 40, yOffset, e -> openApp(new TerminalApp(new File(VM_DIR))));
+    addDesktopIcon("Explorer", 40, yOffset + 120, e -> openApp(new ExplorerApp()));
+    addDesktopIcon("App Store", 40, yOffset + 240, e -> openApp(new AppStore()));
+    addDesktopIcon("Browser", 40, yOffset + 480, e -> openApp(new BrowserApp()));
+
+    // Desktop-JARs
+    File dir = new File(VM_DIR);
+    File[] files = dir.listFiles();
+    int startX = 160;
+    int startY = yOffset; // wichtig!
+    if(files != null) {
+        Arrays.sort(files);
+        for(File f : files) {
+            if(f.getName().endsWith(".jar")) {
+                addDesktopIcon(f.getName(), startX, startY, e -> runJar(f));
+                startY += 120;
+                if(startY > screenHeight - 200) { startY = yOffset; startX += 120; }
+            }
+        }
+    }
+
+    // Benutzer-Shortcuts
+    for(File f : customShortcuts) {
+        if(f.exists()) {
+            addDesktopIcon(f.getName(), startX, startY, e -> executeFile(f));
+            startY += 120;
+            if(startY > screenHeight - 200) { startY = yOffset; startX += 120; }
+        }
+    }
+
+    desktop.revalidate();
+    desktop.repaint();
+}
 
         public static void runJar(File f) {
             try {
@@ -289,17 +450,64 @@ public class Main extends JFrame {
             }
         }
 
-        public static void executeFile(File f) {
-            if(f == null || !f.exists()) return;
-            if(f.isDirectory()) { 
-                ExplorerApp app = new ExplorerApp();
-                app.setPath(f);
-                openApp(app); 
+        public static void runJava(File javaFile) {
+    try {
+        // Prüfen, ob GUI/Swing verwendet wird
+        boolean isSwingApp = Files.lines(javaFile.toPath())
+            .anyMatch(line -> line.contains("javax.swing") || line.contains("JFrame") || line.contains("JButton"));
+
+        if (isSwingApp) {
+            // GUI-Datei → separater Prozess starten
+            JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
+            if (compiler == null) {
+                JOptionPane.showMessageDialog(null, "Kein JDK gefunden!");
+                return;
             }
-            else if(f.getName().endsWith(".jar")) runJar(f);
-            else if(f.getName().toLowerCase().endsWith(".png") || f.getName().toLowerCase().endsWith(".jpg")) openApp(new ImageViewer(f));
-            else openApp(new TextEditor(f));
+
+            // Kompilieren
+            int result = compiler.run(null, null, null, javaFile.getAbsolutePath());
+            if (result != 0) {
+                JOptionPane.showMessageDialog(null, "Kompilierungsfehler!");
+                return;
+            }
+
+            String className = javaFile.getName().replace(".java", "");
+            ProcessBuilder pb = new ProcessBuilder("java", className);
+            pb.directory(javaFile.getParentFile());
+            pb.inheritIO();  // Ausgaben erscheinen im Terminal
+            pb.start();
+
+        } else {
+            // Terminal-Datei → TerminalApp nutzen
+            TerminalApp term = new TerminalApp(javaFile.getParentFile());
+openApp(term);
+term.getInputField().setText("java " + javaFile.getName());
+term.getInputField().postActionEvent();
         }
+
+    } catch (Exception e) {
+        JOptionPane.showMessageDialog(null, "Fehler beim Starten: " + e.getMessage());
+    }
+}
+
+
+        public static void executeFile(File f) {
+    if (f == null || !f.exists()) return;
+
+    if (f.isDirectory()) {
+        ExplorerApp app = new ExplorerApp();
+        app.setPath(f);
+        openApp(app);
+    } else if (f.getName().endsWith(".jar")) {
+        runJar(f);
+    } else if (f.getName().toLowerCase().endsWith(".java")) {
+        runJava(f);  // NEU: Java-Dateien starten
+    } else if (f.getName().toLowerCase().endsWith(".png") || f.getName().toLowerCase().endsWith(".jpg")) {
+        openApp(new ImageViewer(f));
+    } else {
+        openApp(new TextEditor(f));
+    }
+}
 
         public static void setWallpaper(String path) {
             wallpaperPath = path;
@@ -430,24 +638,21 @@ if(icon != null) {
 
         public static void saveSettings() {
     try (OutputStream out = new FileOutputStream("system.cfg")) {
-        // Grund-Einstellungen
         systemProps.setProperty("theme", currentTheme);
-        systemProps.setProperty("timeOffset", String.valueOf(timeOffsetMillis));
 
         // Wallpaper relativ speichern
-        if (!wallpaperPath.isEmpty()) {
-            try {
-                File vmDir = new File(VM_DIR);
-                String relativeWallpaper = vmDir.toPath().relativize(new File(wallpaperPath).toPath()).toString();
-                systemProps.setProperty("wallpaper", relativeWallpaper);
-            } catch(Exception ex) {
-                System.err.println("Fehler beim Speichern des Wallpapers: " + wallpaperPath);
-            }
+        if (wallpaperPath != null && !wallpaperPath.isEmpty()) {
+            File f = new File(wallpaperPath);
+            String relPath = f.getAbsolutePath().startsWith(new File(VM_DIR).getAbsolutePath()) 
+                             ? f.getAbsolutePath().substring(new File(VM_DIR).getAbsolutePath().length() + 1)
+                             : f.getName(); // falls außerhalb von VM_Disk, nur Name
+            systemProps.setProperty("wallpaper", relPath);
         } else {
             systemProps.setProperty("wallpaper", "");
         }
 
-        // Desktop-Icon-Positionen speichern
+        systemProps.setProperty("timeOffset", String.valueOf(timeOffsetMillis));
+
         if (desktop != null) {
             for (Component c : desktop.getComponents()) {
                 if (c.getName() != null && c.getName().startsWith("ICON_")) {
@@ -456,128 +661,199 @@ if(icon != null) {
             }
         }
 
-        // Shortcuts relativ zum VM-Ordner speichern
+        // Shortcuts relativ speichern
         StringBuilder sb = new StringBuilder();
-        File vmDir = new File(VM_DIR);
         for (File f : customShortcuts) {
-            try {
-                String relative = vmDir.toPath().relativize(f.toPath()).toString();
-                sb.append(relative).append(";");
-            } catch(Exception ex) {
-                System.err.println("Fehler beim Speichern des Shortcuts: " + f.getAbsolutePath());
-            }
+            String relPath = f.getAbsolutePath().startsWith(new File(VM_DIR).getAbsolutePath()) 
+                             ? f.getAbsolutePath().substring(new File(VM_DIR).getAbsolutePath().length() + 1)
+                             : f.getName();
+            sb.append(relPath).append(";");
         }
         systemProps.setProperty("shortcuts", sb.toString());
 
-        // In die Datei schreiben
         systemProps.store(out, "System Settings");
-
     } catch (IOException e) {
-        System.err.println("Fehler beim Speichern der Einstellungen: " + e.getMessage());
+        e.printStackTrace();
     }
 }
 
         private void loadSettings() {
-            try (InputStream in = new FileInputStream("system.cfg")) {
-                systemProps.load(in);
-                currentTheme = systemProps.getProperty("theme", "Win10");
-                wallpaperPath = systemProps.getProperty("wallpaper", "");
-                timeOffsetMillis = Long.parseLong(systemProps.getProperty("timeOffset", "0"));
+    try (InputStream in = new FileInputStream("system.cfg")) {
+        systemProps.load(in);
+        currentTheme = systemProps.getProperty("theme", "Win10");
+        String wp = systemProps.getProperty("wallpaper", "");
+        wallpaperPath = wp.isEmpty() ? "" : new File(VM_DIR, wp).getAbsolutePath();
+        timeOffsetMillis = Long.parseLong(systemProps.getProperty("timeOffset", "0"));
 
-                String sc = systemProps.getProperty("shortcuts", "");
-                customShortcuts.clear();
-                if (!sc.isEmpty()) {
-                    for (String p : sc.split(";")) {
-                        if (!p.isEmpty()) customShortcuts.add(new File(p));
-                    }
-                }
-            } catch (Exception e) {}
+        String sc = systemProps.getProperty("shortcuts", "");
+        customShortcuts.clear();
+        if (!sc.isEmpty()) {
+            for (String p : sc.split(";")) {
+                if (!p.isEmpty()) customShortcuts.add(new File(VM_DIR, p));
+            }
         }
-
+    } catch (Exception e) {
+        e.printStackTrace();
+    }
+}
         public static void main(String[] args) {
             SwingUtilities.invokeLater(() -> new Main().setVisible(true));
         }
     }
 
     // ================= STARTMENÜ =================
-    class StartMenu extends JDialog {
-        private JTextField searchField;
-        private JPanel resultsPanel;
-        private List<AppEntry> allApps = new ArrayList<>();
+class StartMenu extends JDialog {
+    private JTextField searchField;
+    private JPanel resultsPanel;
+    private List<AppEntry> allApps = new ArrayList<>();
+    private Main parent;
 
-        class AppEntry {
-            String name; Runnable action;
-            AppEntry(String n, Runnable a) { name = n; action = a; }
-        }
-
-        public StartMenu(Main parent) {
-            super(parent);
-            setUndecorated(true);
-            setSize(300, 450);
-            setLayout(new BorderLayout());
-            getContentPane().setBackground(new Color(40,40,40));
-            getRootPane().setBorder(new LineBorder(Color.GRAY, 2));
-
-            searchField = new JTextField();
-            searchField.setBackground(new Color(60,60,60));
-            searchField.setForeground(Color.WHITE);
-            searchField.setBorder(new TitledBorder(new LineBorder(Color.GRAY), "Suche...", TitledBorder.LEFT, TitledBorder.TOP, null, Color.WHITE));
-
-            resultsPanel = new JPanel();
-            resultsPanel.setLayout(new BoxLayout(resultsPanel, BoxLayout.Y_AXIS));
-            resultsPanel.setBackground(new Color(40,40,40));
-
-            JPanel themeBox = new JPanel(new GridLayout(2,2));
-            String[] themes = {"Win95", "Win10", "macOS", "Linux"};
-            for(String t : themes) {
-                JButton b = new JButton(t);
-                b.addActionListener(e -> { parent.applyTheme(t); dispose(); });
-                themeBox.add(b);
-            }
-
-            JButton exitBtn = new JButton("System Beenden");
-            exitBtn.addActionListener(e -> { Main.saveSettings(); System.exit(0); });
-
-            add(searchField, BorderLayout.NORTH);
-            add(new JScrollPane(resultsPanel), BorderLayout.CENTER);
-            JPanel south = new JPanel(new BorderLayout());
-            south.add(themeBox, BorderLayout.CENTER);
-            south.add(exitBtn, BorderLayout.SOUTH);
-            add(south, BorderLayout.SOUTH);
-
-            allApps.add(new AppEntry("Terminal", () -> Main.openApp(new TerminalApp(new File(Main.VM_DIR)))));
-            allApps.add(new AppEntry("Explorer", () -> Main.openApp(new ExplorerApp())));
-            allApps.add(new AppEntry("App Store", () -> Main.openApp(new AppStore())));
-            allApps.add(new AppEntry("Browser", () -> Main.openApp(new BrowserApp())));
-            allApps.add(new AppEntry("Text Editor", () -> Main.openApp(new TextEditor())));
-
-            File dir = new File(Main.VM_DIR);
-            File[] files = dir.listFiles();
-            if(files != null) for(File f : files) if(f.getName().endsWith(".jar")) allApps.add(new AppEntry(f.getName(), () -> Main.runJar(f)));
-
-            updateResults("");
-            searchField.getDocument().addDocumentListener(new DocumentListener() {
-                public void insertUpdate(DocumentEvent e) { updateResults(searchField.getText()); }
-                public void removeUpdate(DocumentEvent e) { updateResults(searchField.getText()); }
-                public void changedUpdate(DocumentEvent e) { updateResults(searchField.getText()); }
-            });
-            addWindowFocusListener(new WindowAdapter() { public void windowLostFocus(WindowEvent e) { dispose(); } });
-        }
-
-        private void updateResults(String q) {
-            resultsPanel.removeAll();
-            for(AppEntry a : allApps) {
-                if(q.isEmpty() || a.name.toLowerCase().contains(q.toLowerCase())) {
-                    JButton b = new JButton(a.name);
-                    b.setMaximumSize(new Dimension(300, 40));
-                    b.addActionListener(e -> { a.action.run(); dispose(); });
-                    resultsPanel.add(b);
-                }
-            }
-            resultsPanel.revalidate(); resultsPanel.repaint();
-        }
-        public void showAt(int x, int y) { setLocation(x,y); setVisible(true); searchField.requestFocus(); }
+    class AppEntry {
+        String name;
+        Runnable action;
+        AppEntry(String n, Runnable a) { name = n; action = a; }
     }
+
+    public StartMenu(Main parent) {
+        super(parent);
+        this.parent = parent;
+
+        setUndecorated(true);
+        setLayout(new BorderLayout());
+
+        // --- Hintergrundfarbe nach Theme ---
+        updateBackground();
+
+        getRootPane().setBorder(new LineBorder(Color.GRAY, 2));
+
+        // --- Suchfeld ---
+        searchField = new JTextField();
+        searchField.setBorder(new TitledBorder(new LineBorder(Color.GRAY), "Suche...", TitledBorder.LEFT, TitledBorder.TOP, null, parent.textColor));
+        searchField.setBackground(themeColorBackground());
+        searchField.setForeground(parent.textColor);
+
+        // --- Ergebnis-Panel ---
+        resultsPanel = new JPanel();
+        resultsPanel.setLayout(new BoxLayout(resultsPanel, BoxLayout.Y_AXIS));
+        resultsPanel.setBackground(themeColorBackground());
+
+        // --- Theme Buttons ---
+        JPanel themeBox = new JPanel(new GridLayout(2,2,5,5));
+        themeBox.setOpaque(false);
+        String[] themes = {"Win95", "Win10", "macOS", "Linux"};
+        for(String t : themes) {
+            JButton b = new JButton(t);
+            b.setBackground(themeColorBackground());
+            b.setForeground(parent.textColor);
+            b.setFocusPainted(false);
+            b.addActionListener(e -> { 
+                parent.applyTheme(t); 
+                updateBackground(); 
+                dispose(); 
+            });
+            themeBox.add(b);
+        }
+
+        // --- Exit Button ---
+        JButton exitBtn = new JButton("System Beenden");
+        exitBtn.setBackground(themeColorBackground());
+        exitBtn.setForeground(parent.textColor);
+        exitBtn.setFocusPainted(false);
+        exitBtn.addActionListener(e -> { Main.saveSettings(); System.exit(0); });
+
+        // --- Aufbau ---
+        add(searchField, BorderLayout.NORTH);
+        add(new JScrollPane(resultsPanel), BorderLayout.CENTER);
+
+        JPanel south = new JPanel(new BorderLayout());
+        south.setOpaque(false);
+        south.add(themeBox, BorderLayout.CENTER);
+        south.add(exitBtn, BorderLayout.SOUTH);
+        add(south, BorderLayout.SOUTH);
+
+        // --- Apps laden ---
+        loadApps();
+
+        // --- Suche reagieren lassen ---
+        searchField.getDocument().addDocumentListener(new DocumentListener() {
+            public void insertUpdate(DocumentEvent e) { updateResults(searchField.getText()); }
+            public void removeUpdate(DocumentEvent e) { updateResults(searchField.getText()); }
+            public void changedUpdate(DocumentEvent e) { updateResults(searchField.getText()); }
+        });
+
+        // --- Schließen beim Fokusverlust ---
+        addWindowFocusListener(new WindowAdapter() { 
+            public void windowLostFocus(WindowEvent e) { dispose(); } 
+        });
+    }
+
+    // --- Hintergrundfarbe nach Theme ---
+    private void updateBackground() {
+        Color bg = themeColorBackground();
+        getContentPane().setBackground(bg);
+        if(resultsPanel != null) resultsPanel.setBackground(bg);
+    }
+
+    private Color themeColorBackground() {
+        switch(parent.currentTheme) {
+            case "Win95": return new Color(192,192,192);
+            case "Win10": return new Color(40,40,40);
+            case "macOS": return new Color(230,230,230,220);
+            case "Linux": return new Color(50,50,50);
+            default: return new Color(40,40,40);
+        }
+    }
+
+    // --- Apps laden ---
+    private void loadApps() {
+        allApps.clear();
+        allApps.add(new AppEntry("Terminal", () -> Main.openApp(new TerminalApp(new File(Main.VM_DIR)))));
+        allApps.add(new AppEntry("Explorer", () -> Main.openApp(new ExplorerApp())));
+        allApps.add(new AppEntry("App Store", () -> Main.openApp(new AppStore())));
+        allApps.add(new AppEntry("Browser", () -> Main.openApp(new BrowserApp())));
+        allApps.add(new AppEntry("Text Editor", () -> Main.openApp(new TextEditor())));
+
+        File dir = new File(Main.VM_DIR);
+        File[] files = dir.listFiles();
+        if(files != null) for(File f : files) if(f.getName().endsWith(".jar")) 
+            allApps.add(new AppEntry(f.getName(), () -> Main.runJar(f)));
+
+        updateResults("");
+    }
+
+    // --- Ergebnisliste aktualisieren ---
+    private void updateResults(String q) {
+        resultsPanel.removeAll();
+        for(AppEntry a : allApps) {
+            if(q.isEmpty() || a.name.toLowerCase().contains(q.toLowerCase())) {
+                JButton b = new JButton(a.name);
+                b.setMaximumSize(new Dimension(300, 40));
+                b.setBackground(themeColorBackground());
+                b.setForeground(parent.textColor);
+                b.setFocusPainted(false);
+                b.addActionListener(e -> { a.action.run(); dispose(); });
+                resultsPanel.add(b);
+            }
+        }
+        resultsPanel.revalidate(); 
+        resultsPanel.repaint();
+    }
+
+    public void showAt(int x, int y) {
+    pack(); 
+    int tbHeight = parent.taskbar.getHeight();
+
+    if(parent.currentTheme.equals("macOS")) {
+        y = tbHeight + 5; // Taskbar oben
+    } else {
+        y = parent.getHeight() - tbHeight - getHeight() - 5; // Taskbar unten
+    }
+
+    setLocation(x, y);
+    setVisible(true);
+    searchField.requestFocus();
+}
+}
 
     // ================= EXPLORER =================
     class ExplorerApp extends JInternalFrame {
@@ -591,6 +867,7 @@ if(icon != null) {
             super("Explorer", true, true, true, true);
             setSize(700, 500);
             setLayout(new BorderLayout());
+            applyTheme(Main.currentTheme); // sofort Theme anwenden
 
             list.addKeyListener(new KeyAdapter() {
                 public void keyPressed(KeyEvent e) {
@@ -679,6 +956,12 @@ if(icon != null) {
                             }
                         }
                     }));
+
+                    menu.add(new JMenuItem(new AbstractAction("Ausführen") {
+    public void actionPerformed(ActionEvent e) {
+        Main.runJava(f);  // <-- explizit Main verwenden
+    }
+}));
 
                     menu.add(new JMenuItem(new AbstractAction("Loeschen") {
                         public void actionPerformed(ActionEvent e) { if(f.delete()) refresh(); }
@@ -778,6 +1061,36 @@ if(icon != null) {
                 refresh();
             } catch (IOException e) { JOptionPane.showMessageDialog(this, "Fehler beim Operation."); }
         }
+
+        public void applyTheme(String theme) {
+    Color bg, fg;
+    switch(theme) {
+        case "Win95":
+            bg = new Color(192,192,192);
+            fg = Color.BLACK;
+            break;
+        case "Win10":
+            bg = new Color(30,30,30);
+            fg = Color.WHITE;
+            break;
+        case "macOS":
+            bg = new Color(230,230,230);
+            fg = Color.BLACK;
+            break;
+        case "Linux":
+            bg = new Color(48,10,36);
+            fg = Color.WHITE;
+            break;
+        default:
+            bg = new Color(30,30,30);
+            fg = Color.WHITE;
+    }
+    list.setBackground(bg);
+    list.setForeground(fg);
+    list.setFont(new Font("SansSerif", Font.PLAIN, 12));
+    getContentPane().setBackground(bg);
+}
+
     }
     // ================= APP STORE =================
     class AppStore extends JInternalFrame {
@@ -965,6 +1278,10 @@ class TerminalApp extends JInternalFrame {
         setVisible(true); // WICHTIG: sonst wird Fenster nicht angezeigt
     }
 
+    public JTextField getInputField() {
+    return input;
+}
+
     private void readStream(InputStream is) {
         try (BufferedReader br = new BufferedReader(new InputStreamReader(is))) {
             String line;
@@ -975,6 +1292,9 @@ class TerminalApp extends JInternalFrame {
         } catch (Exception e) {}
     }
 }
+
+
+
     class ImageViewer extends JInternalFrame {
         public ImageViewer(File f) {
             super("Image Viewer", true, true, true, true);
