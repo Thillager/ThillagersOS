@@ -109,7 +109,7 @@ public class Main extends JFrame {
     public static List<File> customShortcuts = new ArrayList<>();
 
     public static Main instance;
-    
+
     public Main() {
         instance = this;
         File vmDir = new File(VM_DIR);
@@ -118,7 +118,7 @@ public class Main extends JFrame {
         setTitle("Thillagers OS");
         setUndecorated(true);
         setExtendedState(JFrame.MAXIMIZED_BOTH);
-        
+
         Dimension sz = Toolkit.getDefaultToolkit().getScreenSize();
         setSize(sz.width, sz.height);
         setLocation(0, 0);
@@ -141,12 +141,17 @@ public class Main extends JFrame {
             }
         };
         desktop.setLayout(null);
-        // Position wird jetzt vom ComponentListener gesetzt
-        lp.add(desktop, JLayeredPane.DEFAULT_LAYER);
 
-        taskbar = new JPanel(new BorderLayout());
-        taskbar.setBackground(taskbarColor);
-        lp.add(taskbar, JLayeredPane.PALETTE_LAYER);
+        taskbar = new JPanel(new BorderLayout()) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                // Hintergrund komplett füllen, auch bei halbtransparent
+                g.setColor(getBackground());
+                g.fillRect(0, 0, getWidth(), getHeight());
+                super.paintComponent(g);
+                taskbar.setOpaque(true);
+            }
+        };
 
         JButton startBtn = new JButton("START");
         startBtn.setFocusPainted(false);
@@ -200,6 +205,9 @@ public class Main extends JFrame {
         loadSettings();
         applyTheme(currentTheme);
         if(!wallpaperPath.isEmpty()) setWallpaper(wallpaperPath);
+        // Position wird jetzt vom ComponentListener gesetzt
+        lp.add(desktop, JLayeredPane.DEFAULT_LAYER);
+        lp.add(taskbar, JLayeredPane.PALETTE_LAYER); // PALTTE_LAYER liegt über DEFAULT_LAYER
 
         this.addComponentListener(new ComponentAdapter() {
     @Override
@@ -536,7 +544,7 @@ term.getInputField().postActionEvent();
             else path = "resources/file.png";
     }
             } else {
-        
+
     switch (title.toLowerCase()) {
         case "terminal": path = "/terminal.PNG"; break;
         case "explorer": path = "/explorer.PNG"; break;
@@ -669,6 +677,7 @@ if (icon != null) {
                 taskIconsPanel.remove(tBtn);
                 taskIconsPanel.revalidate();
                 taskIconsPanel.repaint();
+                taskbar.repaint();
             }
         });
     }
