@@ -1,3 +1,8 @@
+# own
+.replit
+replit.nix
+
+
 # Compiled class file
 *.class
 
