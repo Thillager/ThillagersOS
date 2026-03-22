@@ -498,24 +498,61 @@ public class Main extends JFrame {
 }
 
 
-public static void runJarInTerminal(File jarFile, String mainClass) {
-    TerminalApp term = new TerminalApp(jarFile.getParentFile());
-    Main.openApp(term);
+    public static void runJarInTerminal(File jarFile, String mainClass) {
+        TerminalApp term = new TerminalApp(jarFile.getParentFile());
+        Main.openApp(term);
 
-    try {
-        ProcessBuilder pb = new ProcessBuilder(
-            "java", "-cp", jarFile.getAbsolutePath(), mainClass
-        );
-        pb.directory(jarFile.getParentFile());
-        Process proc = pb.start();
+        try {
+            // 1. Prozess-Builder Setup
+            ProcessBuilder pb = new ProcessBuilder(
+                "java", "-cp", jarFile.getAbsolutePath(), mainClass
+            );
+            pb.directory(jarFile.getParentFile());
 
-        new Thread(() -> term.readStream(proc.getInputStream())).start();
-        new Thread(() -> term.readStream(proc.getErrorStream())).start();
+            // Startet den Prozess
+            Process proc = pb.start();
 
-    } catch (Exception e) {
-        JOptionPane.showMessageDialog(null, "Fehler beim Starten: " + e.getMessage());
+            // 2. OUTPUT-BRIDGE: Streams vom JAR lesen und im Terminal anzeigen
+            new Thread(() -> term.readStream(proc.getInputStream())).start();
+            new Thread(() -> term.readStream(proc.getErrorStream())).start();
+
+            // 3. INPUT-BRIDGE: Eingaben vom Terminal-Textfeld an das JAR senden
+            // Wir brauchen einen Writer, um in den "Standard-In" des JARs zu schreiben
+            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(proc.getOutputStream()));
+
+            // Wir definieren, was passiert, wenn du ENTER im Terminal drückst
+            ActionListener inputBridge = e -> {
+                try {
+                    String input = term.getInputField().getText();
+                    writer.write(input + "\n"); // Schickt den Text + Zeilenumbruch an das JAR
+                    writer.flush();             // Erzwingt das Senden (wichtig für Scanner!)
+                    term.getInputField().setText(""); // Feld leeren
+                } catch (IOException ex) {
+                    // Passiert meistens, wenn das JAR bereits geschlossen wurde
+                    System.err.println("Fehler beim Senden an JAR: " + ex.getMessage());
+                }
+            };
+
+            // Den Listener an das Eingabefeld hängen
+            term.getInputField().addActionListener(inputBridge);
+
+            // 4. CLEANUP: Wenn das JAR beendet wird, den Listener wieder entfernen
+            new Thread(() -> {
+                try {
+                    proc.waitFor(); // Warten bis das Programm fertig ist
+                    // Wichtig: Listener entfernen, damit das Terminal danach wieder normal nutzbar ist
+                    term.getInputField().removeActionListener(inputBridge);
+                    writer.close();
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+            }).start();
+
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(null, "Fehler beim Starten: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
-}
 
 public static void runJarGui(File jarFile, String mainClass) {
     try {
@@ -589,6 +626,10 @@ term.getInputField().postActionEvent();
                 mainClass = "SuperCalculator";
                 forceGui = true; // GUI erzwingen
             }
+            if (f.getName().equalsIgnoreCase("TuiCalc.jar")) {
+                mainClass = "TuiCalc";
+                forceGui = false;
+            }
 
             // Wenn noch keine Main-Klasse gesetzt, vom Benutzer abfragen
             if (mainClass == null || mainClass.trim().isEmpty()) {
@@ -601,9 +642,12 @@ term.getInputField().postActionEvent();
                 if (mainClass == null || mainClass.trim().isEmpty()) return;
             }
 
-            if (forceGui) {
+            if (forceGui == true) {
                 runJarGui(f, mainClass);
-            } else {
+            } else if (forceGui == false) {
+                runJarInTerminal(f, mainClass);
+            } 
+            else {
                 // Abfrage, ob im Terminal gestartet werden soll
                 int result = JOptionPane.showConfirmDialog(
                     null,
@@ -1407,6 +1451,7 @@ class TerminalApp extends JInternalFrame {
     private JTextField input;
     private Process process;
     private BufferedWriter writer;
+    private String lastCommand = "";
 
     public TerminalApp(File dir) {
         super("Terminal", true, true, true, true); // WICHTIG: Titel + Resizable, Closable, Maximizable, Iconifiable
@@ -1416,6 +1461,8 @@ class TerminalApp extends JInternalFrame {
         area.setBackground(Color.BLACK);
         area.setForeground(Color.GREEN);
         area.setEditable(false);
+        // In den TerminalApp Konstruktor:
+        area.setFont(new Font("Monospaced", Font.PLAIN, 13));
 
         input = new JTextField();
         input.setBackground(Color.BLACK);
@@ -1450,6 +1497,36 @@ class TerminalApp extends JInternalFrame {
         input.addActionListener(e -> {
             try {
                 writer.write(input.getText());
+                writer.newLine();
+                writer.flush();
+                input.setText("");
+            } catch (Exception ex) {
+                area.append("Fehler beim Senden\n");
+            }
+        });
+
+        // Im Konstruktor von TerminalApp:
+        input.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_UP) {
+                    // Wenn Pfeil-hoch gedrückt wird: Letzten Befehl ins Feld setzen
+                    input.setText(lastCommand);
+                } else if (e.getKeyCode() == KeyEvent.VK_DOWN) {
+                    // Optional: Pfeil-runter macht das Feld leer
+                    input.setText("");
+                }
+            }
+        });
+
+        // WICHTIG: Im ActionListener (wenn Enter gedrückt wird) den Befehl speichern
+        input.addActionListener(e -> {
+            String text = input.getText();
+            if (!text.isEmpty()) {
+                lastCommand = text; // Hier wird der Befehl für "Pfeil-hoch" gemerkt
+            }
+            try {
+                writer.write(text);
                 writer.newLine();
                 writer.flush();
                 input.setText("");
