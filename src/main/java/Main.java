@@ -572,59 +572,65 @@ term.getInputField().postActionEvent();
 }
 
 
-        public static void executeFile(File f) {
-    if (f == null || !f.exists()) return;
+    public static void executeFile(File f) {
+        if (f == null || !f.exists()) return;
 
-    if (f.isDirectory()) {
-        ExplorerApp app = new ExplorerApp();
-        app.setPath(f);
-        openApp(app);
-    } else if (f.getName().endsWith(".jar")) {
-    // Immer Main-Klasse abfragen
-    String mainClass = JOptionPane.showInputDialog(
-        null,
-        "Main-Klasse eingeben (z.B. com.example.Main):",
-        "Jar starten",
-        JOptionPane.QUESTION_MESSAGE
-    );
+        if (f.isDirectory()) {
+            ExplorerApp app = new ExplorerApp();
+            app.setPath(f);
+            openApp(app);
 
-    if (mainClass == null || mainClass.trim().isEmpty()) return;
+        } else if (f.getName().toLowerCase().endsWith(".jar")) {
+            String mainClass = null;
+            boolean forceGui = false;
 
-    // Abfrage Terminal
-    int result = JOptionPane.showConfirmDialog(
-        null,
-        "Soll die JAR im Terminal gestartet werden?",
-        "Terminal starten?",
-        JOptionPane.YES_NO_OPTION
-    );
-
-    if (result == JOptionPane.YES_OPTION) {
-        runJarInTerminal(f, mainClass);
-    } else {
-        runJarGui(f, mainClass);
-    }
-    } else if (f.getName().toLowerCase().endsWith(".java")) {
-        runJava(f);  // NEU: Java-Dateien starten
-    } else if (f.getName().toLowerCase().endsWith(".png") || f.getName().toLowerCase().endsWith(".jpg")) {
-        openApp(new ImageViewer(f));
-    } else {
-        openApp(new TextEditor(f));
-    }
-}
-
-public static boolean jarNeedsTerminal(File jarFile) {
-    try (JarFile jar = new JarFile(jarFile)) {
-        Manifest manifest = jar.getManifest();
-        if (manifest != null) {
-            String mainClass = manifest.getMainAttributes().getValue("Main-Class");
-            if (mainClass != null) {
-                // Prüfe den Namen: Wenn "Terminal" drin, Terminal, sonst GUI
-                return mainClass.toLowerCase().contains("terminal");
+            // Spezielle JAR prüfen
+            if (f.getName().equalsIgnoreCase("Calculator.jar")) {
+                mainClass = "SuperCalculator";
+                forceGui = true; // GUI erzwingen
             }
+
+            // Wenn noch keine Main-Klasse gesetzt, vom Benutzer abfragen
+            if (mainClass == null || mainClass.trim().isEmpty()) {
+                mainClass = JOptionPane.showInputDialog(
+                    null,
+                    "Main-Klasse eingeben (z.B. com.example.Main):",
+                    "Jar starten",
+                    JOptionPane.QUESTION_MESSAGE
+                );
+                if (mainClass == null || mainClass.trim().isEmpty()) return;
+            }
+
+            if (forceGui) {
+                runJarGui(f, mainClass);
+            } else {
+                // Abfrage, ob im Terminal gestartet werden soll
+                int result = JOptionPane.showConfirmDialog(
+                    null,
+                    "Soll die JAR im Terminal gestartet werden?",
+                    "Terminal starten?",
+                    JOptionPane.YES_NO_OPTION
+                );
+
+                if (result == JOptionPane.YES_OPTION) {
+                    runJarInTerminal(f, mainClass);
+                } else {
+                    runJarGui(f, mainClass);
+                }
+            }
+
+        } else if (f.getName().toLowerCase().endsWith(".java")) {
+            runJava(f); // Java-Dateien starten
+
+        } else if (f.getName().toLowerCase().endsWith(".png") ||
+                   f.getName().toLowerCase().endsWith(".jpg") ||
+                   f.getName().toLowerCase().endsWith(".jpeg")) {
+            openApp(new ImageViewer(f));
+
+        } else {
+            openApp(new TextEditor(f));
         }
-    } catch(Exception e) { e.printStackTrace(); }
-    return false;
-}
+    }
 
 
         public static void setWallpaper(String path) {
@@ -762,14 +768,29 @@ if (icon != null) {
 
         tBtn.addActionListener(e -> {
             try {
-                if (app.isVisible()) {
-                    app.setVisible(false);
-                } else {
+                if (app.isIcon()) {
+                    // 1. Fall: Wurde über das [-] Symbol minimiert
+                    app.setIcon(false); // Holt es aus dem minimierten Zustand zurück
                     app.setVisible(true);
                     app.toFront();
-                    try { app.setSelected(true); } catch (Exception ignored) {}
+                    app.setSelected(true);
+                } else if (app.isVisible() && app.isSelected()) {
+                    // 2. Fall: Ist offen und im Fokus -> Wir verstecken es
+                    app.setVisible(false); 
+                    // Hinweis: Wenn du stattdessen willst, dass es sich wie beim [-] Klick verhält, 
+                    // nutze hier: app.setIcon(true);
+                } else {
+                    // 3. Fall: Ist im Hintergrund oder unsichtbar -> Ab in den Vordergrund
+                    app.setVisible(true);
+                    app.toFront();
+                    app.setSelected(true);
                 }
-            } catch (Exception ex) { ex.printStackTrace(); }
+            } catch (java.beans.PropertyVetoException ex) { 
+                // SetIcon kann eine VetoException werfen, die müssen wir fangen
+                ex.printStackTrace(); 
+            } catch (Exception ex) { 
+                ex.printStackTrace(); 
+            }
         });
 
         taskIconsPanel.add(tBtn);
@@ -1261,7 +1282,7 @@ class StartMenu extends JDialog {
             setSize(400, 500);
             JPanel listPanel = new JPanel();
             listPanel.setLayout(new BoxLayout(listPanel, BoxLayout.Y_AXIS));
-            addAppEntry(listPanel, "Calculator", "https://github.com/Thillager/ThillagersOS/blob/main/SuperCalculator.jar");
+            addAppEntry(listPanel, "Calculator", "https://github.com/Thillager/ThillagersOS/releases/download/Supercalc/SuperCalculator.2.jar");
             add(new JScrollPane(listPanel), BorderLayout.CENTER);
             JButton custom = new JButton("URL installieren");
             custom.addActionListener(e -> {
