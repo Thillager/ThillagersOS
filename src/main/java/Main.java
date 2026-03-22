@@ -105,6 +105,7 @@ public class Main extends JFrame {
 
     public static Properties systemProps = new Properties();
     public static long timeOffsetMillis = 0;
+    long themeOffsetMillis = 0;
     public static List<File> customShortcuts = new ArrayList<>();
 
     public Main() {
@@ -183,9 +184,16 @@ public class Main extends JFrame {
                 }
             }
         });
-        new javax.swing.Timer(1000, e -> timeLabel.setText(new SimpleDateFormat("HH:mm:ss").format(new Date(System.currentTimeMillis() + timeOffsetMillis)))).start();
-        taskbar.add(timeLabel, BorderLayout.EAST);
+        new javax.swing.Timer(1000, e -> {
+            long themeOffsetMillis = currentTheme.equals("macOS") ? 3600_000 : 0;
+            timeLabel.setText(
+                new SimpleDateFormat("HH:mm:ss").format(
+                    new Date(System.currentTimeMillis() + timeOffsetMillis + themeOffsetMillis)
+                )
+            );
+        }).start();
 
+        taskbar.add(timeLabel, BorderLayout.EAST);
         loadSettings();
         applyTheme(currentTheme);
         if(!wallpaperPath.isEmpty()) setWallpaper(wallpaperPath);
@@ -630,13 +638,26 @@ if(icon != null) {
     tBtn.setFocusPainted(false);
     tBtn.setToolTipText(app.getTitle());
 
-    tBtn.addActionListener(e -> {
-        try {
-            if(app.isIcon()) { app.setIcon(false); app.setSelected(true); }
-            else app.setIcon(true);
-        } catch (Exception ex) {}
-    });
+           tBtn.addActionListener(e -> {
+               try {
+                   if (app.isVisible()) {
+                       // "Minimieren"
+                       app.setVisible(false);
+                   } else {
+                       // "Wieder öffnen"
+                       app.setVisible(true);
+                       app.toFront();
+                       app.moveToFront();
+                       try {
+                           app.setSelected(true);
+                       } catch (Exception ignored) {}
+                   }
+               } catch (Exception ex) {
+                   ex.printStackTrace();
+               }
+           });
 
+           
     taskIconsPanel.add(tBtn);
     taskIconsPanel.revalidate();
     taskIconsPanel.repaint();
@@ -1113,7 +1134,7 @@ class StartMenu extends JDialog {
             setSize(400, 500);
             JPanel listPanel = new JPanel();
             listPanel.setLayout(new BoxLayout(listPanel, BoxLayout.Y_AXIS));
-            addAppEntry(listPanel, "Snake Game", "https://example.com/snake.jar");
+            addAppEntry(listPanel, "Calculator", "https://github.com/Thillager/SuperCalculator/releases/download/v3.6.0/SuperCalculator.jar");
             add(new JScrollPane(listPanel), BorderLayout.CENTER);
             JButton custom = new JButton("URL installieren");
             custom.addActionListener(e -> {
