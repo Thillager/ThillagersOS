@@ -112,7 +112,7 @@ public class Main extends JFrame {
         if(!vmDir.exists()) vmDir.mkdir();
 
         setTitle("Thillagers OS");
-        setUndecorated(false);
+        setUndecorated(true);
         setExtendedState(JFrame.MAXIMIZED_BOTH);
         
         Dimension sz = Toolkit.getDefaultToolkit().getScreenSize();
