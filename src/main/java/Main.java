@@ -521,10 +521,10 @@ term.getInputField().postActionEvent();
 
             if(currentTheme.equals("macOS")) {
     switch (title.toLowerCase()) {
-        case "terminal": path = "resources/terminal.PNG"; break;
-        case "explorer": path = "resources/explorer.PNG"; break;
+        case "terminal": path = "resources/terminal.png"; break;
+        case "explorer": path = "resources/explorer.png"; break;
         case "app store": path = "resources/store.jpeg"; break;
-        case "browser": path = "resources/browser.JPG"; break;
+        case "browser": path = "resources/browser.jpeg"; break;
         default:
             if(title.endsWith(".jar")) path = "resources/jar.jpeg";
             else path = "resources/file.png";
