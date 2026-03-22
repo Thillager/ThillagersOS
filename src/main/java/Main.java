@@ -44,6 +44,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.jar.Attributes;
 import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
 
@@ -436,7 +437,7 @@ public class Main extends JFrame {
         Arrays.sort(files);
         for(File f : files) {
             if(f.getName().endsWith(".jar")) {
-                addDesktopIcon(f.getName(), startX, startY, e -> runJar(f));
+                addDesktopIcon(f.getName(), startX, startY, e -> executeFile(f));
                 startY += 120;
                 if(startY > screenHeight - 200) { startY = yOffset; startX += 120; }
             }
@@ -456,13 +457,79 @@ public class Main extends JFrame {
     desktop.repaint();
 }
 
+        public static void runJarAskMain(File f) {
+    String mainClass = JOptionPane.showInputDialog(
+        null,
+        "Main-Klasse eingeben (z.B. com.example.Main):",
+        "Jar starten",
+        JOptionPane.QUESTION_MESSAGE
+    );
+
+    if (mainClass == null || mainClass.trim().isEmpty()) return;
+
+    try {
+        ProcessBuilder pb = new ProcessBuilder(
+            "java",
+            "-cp",
+            f.getAbsolutePath(),
+            mainClass
+        );
+
+        pb.directory(f.getParentFile()); // wichtig!
+        pb.inheritIO(); // zeigt Fehler im Terminal
+        pb.start();
+
+    } catch (Exception e) {
+        e.printStackTrace();
+        JOptionPane.showMessageDialog(null, "Fehler beim Starten!");
+    }
+}
+
         public static void runJar(File f) {
-            try {
-                Runtime.getRuntime().exec(new String[]{"java", "-jar", f.getAbsolutePath()});
-            } catch(Exception e) {
-                JOptionPane.showMessageDialog(null, "Startfehler: " + f.getName());
-            }
-        }
+    try {
+        ProcessBuilder pb = new ProcessBuilder("java", "-jar", f.getName());
+        pb.directory(f.getParentFile()); // WICHTIG!
+        pb.inheritIO(); // zeigt Fehler im Terminal
+        pb.start();
+    } catch(Exception e) {
+        e.printStackTrace();
+        JOptionPane.showMessageDialog(null, "Startfehler: " + f.getName());
+    }
+}
+
+
+public static void runJarInTerminal(File jarFile, String mainClass) {
+    TerminalApp term = new TerminalApp(jarFile.getParentFile());
+    Main.openApp(term);
+
+    try {
+        ProcessBuilder pb = new ProcessBuilder(
+            "java", "-cp", jarFile.getAbsolutePath(), mainClass
+        );
+        pb.directory(jarFile.getParentFile());
+        Process proc = pb.start();
+
+        new Thread(() -> term.readStream(proc.getInputStream())).start();
+        new Thread(() -> term.readStream(proc.getErrorStream())).start();
+
+    } catch (Exception e) {
+        JOptionPane.showMessageDialog(null, "Fehler beim Starten: " + e.getMessage());
+    }
+}
+
+public static void runJarGui(File jarFile, String mainClass) {
+    try {
+        ProcessBuilder pb = new ProcessBuilder(
+            "java", "-cp", jarFile.getAbsolutePath(), mainClass
+        );
+        pb.directory(jarFile.getParentFile());
+        pb.inheritIO(); // Fehler im Terminal sichtbar
+        pb.start();
+    } catch (Exception e) {
+        JOptionPane.showMessageDialog(null, "Fehler beim Starten: " + e.getMessage());
+    }
+}
+
 
         public static void runJava(File javaFile) {
     try {
@@ -513,7 +580,29 @@ term.getInputField().postActionEvent();
         app.setPath(f);
         openApp(app);
     } else if (f.getName().endsWith(".jar")) {
-        runJar(f);
+    // Immer Main-Klasse abfragen
+    String mainClass = JOptionPane.showInputDialog(
+        null,
+        "Main-Klasse eingeben (z.B. com.example.Main):",
+        "Jar starten",
+        JOptionPane.QUESTION_MESSAGE
+    );
+
+    if (mainClass == null || mainClass.trim().isEmpty()) return;
+
+    // Abfrage Terminal
+    int result = JOptionPane.showConfirmDialog(
+        null,
+        "Soll die JAR im Terminal gestartet werden?",
+        "Terminal starten?",
+        JOptionPane.YES_NO_OPTION
+    );
+
+    if (result == JOptionPane.YES_OPTION) {
+        runJarInTerminal(f, mainClass);
+    } else {
+        runJarGui(f, mainClass);
+    }
     } else if (f.getName().toLowerCase().endsWith(".java")) {
         runJava(f);  // NEU: Java-Dateien starten
     } else if (f.getName().toLowerCase().endsWith(".png") || f.getName().toLowerCase().endsWith(".jpg")) {
@@ -522,6 +611,21 @@ term.getInputField().postActionEvent();
         openApp(new TextEditor(f));
     }
 }
+
+public static boolean jarNeedsTerminal(File jarFile) {
+    try (JarFile jar = new JarFile(jarFile)) {
+        Manifest manifest = jar.getManifest();
+        if (manifest != null) {
+            String mainClass = manifest.getMainAttributes().getValue("Main-Class");
+            if (mainClass != null) {
+                // Prüfe den Namen: Wenn "Terminal" drin, Terminal, sonst GUI
+                return mainClass.toLowerCase().contains("terminal");
+            }
+        }
+    } catch(Exception e) { e.printStackTrace(); }
+    return false;
+}
+
 
         public static void setWallpaper(String path) {
             wallpaperPath = path;
@@ -862,7 +966,7 @@ class StartMenu extends JDialog {
         File dir = new File(Main.VM_DIR);
         File[] files = dir.listFiles();
         if(files != null) for(File f : files) if(f.getName().endsWith(".jar")) 
-            allApps.add(new AppEntry(f.getName(), () -> Main.runJar(f)));
+            allApps.add(new AppEntry(f.getName(), () -> Main.runJarAskMain(f)));
 
         updateResults("");
     }
@@ -1003,15 +1107,27 @@ class StartMenu extends JDialog {
                         }
                     }));
 
-                    menu.add(new JMenuItem(new AbstractAction("Ausführen") {
+                    menu.add(new JMenuItem(new AbstractAction("Mit Main-Klasse starten") {
     public void actionPerformed(ActionEvent e) {
-        Main.runJava(f);  // <-- explizit Main verwenden
+        Main.runJarAskMain(f);
     }
 }));
 
                     menu.add(new JMenuItem(new AbstractAction("Loeschen") {
                         public void actionPerformed(ActionEvent e) { if(f.delete()) refresh(); }
                     }));
+                    menu.add(new JMenuItem(new AbstractAction("Umbenennen") {
+    public void actionPerformed(ActionEvent e) {
+        String newName = JOptionPane.showInputDialog(ExplorerApp.this, "Neuer Name:", f.getName());
+        if(newName != null && !newName.isEmpty()) {
+            File newFile = new File(f.getParent(), newName);
+            if(f.renameTo(newFile)) refresh();
+            else JOptionPane.showMessageDialog(ExplorerApp.this, "Fehler beim Umbenennen.");
+        }
+    }
+}));
+
+                    
                 } else {
                     list.clearSelection();
                     JMenu neuMenu = new JMenu("Neu");
@@ -1328,7 +1444,7 @@ class TerminalApp extends JInternalFrame {
     return input;
 }
 
-    private void readStream(InputStream is) {
+    void readStream(InputStream is) {
         try (BufferedReader br = new BufferedReader(new InputStreamReader(is))) {
             String line;
             while ((line = br.readLine()) != null) {
