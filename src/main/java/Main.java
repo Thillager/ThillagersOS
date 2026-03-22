@@ -1145,7 +1145,7 @@ class StartMenu extends JDialog {
             setSize(400, 500);
             JPanel listPanel = new JPanel();
             listPanel.setLayout(new BoxLayout(listPanel, BoxLayout.Y_AXIS));
-            addAppEntry(listPanel, "Calculator", "https://github.com/Thillager/SuperCalculator/releases/download/v3.6.0/SuperCalculator.jar");
+            addAppEntry(listPanel, "Calculator", "https://github.com/Thillager/ThillagersOS/blob/main/SuperCalculator.jar");
             add(new JScrollPane(listPanel), BorderLayout.CENTER);
             JButton custom = new JButton("URL installieren");
             custom.addActionListener(e -> {
