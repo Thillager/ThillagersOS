@@ -546,10 +546,10 @@ term.getInputField().postActionEvent();
             } else {
 
     switch (title.toLowerCase()) {
-        case "terminal": path = "/terminal.PNG"; break;
-        case "explorer": path = "/explorer.PNG"; break;
-        case "app store": path = "/store.jpeg"; break;
-        case "browser": path = "/browser.JPG"; break;
+        case "terminal": path = "/terminal.png"; break;
+        case "explorer": path = "/explorer.jpeg"; break;
+        case "app store": path = "/store.jpg"; break;
+        case "browser": path = "/browser.png"; break;
         default:
             if(title.endsWith(".jar")) path = "/jar.jpeg";
             else path = "/file.png";
