@@ -23,7 +23,7 @@ hs_err_pid*
 replay_pid*
 
 # settings
-system.cft
+system.cfg
 resources
 VM_Files
 VM_Disk
