@@ -1,7 +1,7 @@
 # Thillagers OS
 
 <p align="center">
-  <a href="https://github.com/Thillager/ThillagersOS/release">
+  <a href="https://github.com/Thillager/ThillagersOS/releases/latest">
     <img src="https://img.shields.io/badge/Release-red?style=for-the-badge" alt="System Status"
   </a>
   <a href="https://github.com/Thillager">
