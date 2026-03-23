@@ -1462,7 +1462,8 @@ class TerminalApp extends JInternalFrame {
         area.setForeground(Color.GREEN);
         area.setEditable(false);
         // In den TerminalApp Konstruktor:
-        area.setFont(new Font("Monospaced", Font.PLAIN, 13));
+        area.setFont(new Font("Monospaced", Font.PLAIN, 14));
+        area.setLineWrap(false);
 
         input = new JTextField();
         input.setBackground(Color.BLACK);
