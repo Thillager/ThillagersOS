@@ -285,8 +285,15 @@ import javax.tools.ToolProvider;
 
         private void openFile() {
             File f = list.getSelectedValue();
-            Main.executeFile(f);
-            if (f != null && f.isDirectory()) refresh(); // Update self if it was a directory opening
+            if (f == null) return;
+
+            if (f.isDirectory()) {
+                // Wenn es ein Ordner ist: Im SELBEN Fenster öffnen!
+                setPath(f);
+            } else {
+                // Wenn es eine Datei ist: Normales Öffnen (App starten, Bild anzeigen etc.)
+                Main.executeFile(f);
+            }
         }
 
         private void pasteFile() {
