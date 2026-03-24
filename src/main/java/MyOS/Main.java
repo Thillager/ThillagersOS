@@ -429,6 +429,7 @@ public class Main extends JFrame {
     addDesktopIcon("Explorer", 40, yOffset + 120, e -> openApp(new ExplorerApp()));
     addDesktopIcon("App Store", 40, yOffset + 240, e -> openApp(new AppStore()));
     addDesktopIcon("Browser", 40, yOffset + 480, e -> openApp(new BrowserApp()));
+    addDesktopIcon("Taskmanager", 40, yOffset + 600, e-> openApp(new SystemMonitorApp()));
 
     // Desktop-JARs
     File dir = new File(VM_DIR);

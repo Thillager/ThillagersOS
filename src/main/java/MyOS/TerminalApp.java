@@ -232,22 +232,22 @@ public class TerminalApp extends JInternalFrame {
             return true;
         }
 
-        if (lowerCmd.equals("Terminal")) {
+        if (lowerCmd.equals("terminal")) {
             Main.openApp(new TerminalApp(new File(Main.VM_DIR)));
             return true;
         }
 
-        if (lowerCmd.equals("Browser")) {
+        if (lowerCmd.equals("browser")) {
             Main.openApp(new BrowserApp());
             return true;
         }
 
-        if (lowerCmd.equals("App Store")) {
+        if (lowerCmd.equals("app store")) {
             Main.openApp(new AppStore());
             return true;
         }
 
-        if (lowerCmd.equals("Text Editor")) {
+        if (lowerCmd.equals("text editor")) {
             Main.openApp(new TextEditor());
             return true;
         }
