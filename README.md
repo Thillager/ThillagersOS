@@ -17,7 +17,7 @@
 This is some sort of desktop enviroment, first build as a mobile desktop on replit, than build to a virtual machine for every pc with java. 
 
 ### How to download:
-At the moment you can just download the sourcecode and a .jar file. If you have java installed you can just use that one.
+At the moment you can just download the sourcecode and a .jar file, it is in the projects files. If you have java installed you can just use that one. If you are using windows, there is an installer which I made with jPackage, it is in the releases.
 
 ### How to use:
 If you are using it on replit and on the ipad, select the "MacOS" theme, it is an optimized version for the ipad. On a regular pc you can choose them all. You can do basicly everything, if you miss a feature build it yourself and create a pull request. (I think that works)
