@@ -5,7 +5,7 @@
     <img src="https://img.shields.io/badge/Release-red?style=for-the-badge" alt="System Status"
   </a>
   <a href="https://github.com/Thillager">
-    <img src="https://img.shields.io/badge/Colaborators-red?style=for-the-badge" alt="System Status"
+    <img src="https://img.shields.io/badge/Contributors-red?style=for-the-badge" alt="System Status"
   </a>
 </p>
 
