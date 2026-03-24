@@ -1,10 +1,21 @@
 package MyOS;
 
-import javax.swing.*;
-import java.awt.*;
-import java.util.ArrayList;
-import com.sun.management.OperatingSystemMXBean;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.Graphics;
 import java.lang.management.ManagementFactory;
+import java.util.ArrayList;
+
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.JInternalFrame;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JProgressBar;
+import javax.swing.Timer;
+
+import com.sun.management.OperatingSystemMXBean;
 
 public class SystemMonitorApp extends JInternalFrame {
 
@@ -59,7 +70,7 @@ public class SystemMonitorApp extends JInternalFrame {
             long free = osBean.getFreePhysicalMemorySize();
             long totalProcesRam = osBean.getTotalMemorySize();
             long freeProcesRam = osBean.getFreeMemorySize();
-            int ProcesRam = (int) ((freeProcesRam * 100) / totalProcesRam);
+            int ProcesRam = (int) ((freeProcesRam * 10) / totalProcesRam);
             int ramPercent = (int) (((total - free) * 100) / total);
             ramBar.setValue(ramPercent);
             ramLabel.setText("RAM: " + ramPercent + "%");
