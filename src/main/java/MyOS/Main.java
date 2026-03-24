@@ -614,24 +614,11 @@ term.getInputField().postActionEvent();
     public static void executeFile(File f) {
         if (f == null || !f.exists()) return;
 
-        // 1. ORDNER-LOGIK: Navigation vs. Neu öffnen
         if (f.isDirectory()) {
-            // Wir schauen nach, welches Fenster im Desktop gerade "vorne" (selektiert) ist
-            JInternalFrame activeFrame = desktop.getSelectedFrame();
+            ExplorerApp app = new ExplorerApp();
+            app.setPath(f);
+            openApp(app);
 
-            if (activeFrame instanceof ExplorerApp) {
-                // Falls das aktive Fenster bereits ein Explorer ist: 
-                // Einfach den Pfad dort aktualisieren (kein neues Fenster!)
-                ((ExplorerApp) activeFrame).setPath(f);
-            } else {
-                // Falls kein Explorer aktiv ist (z.B. Klick vom Desktop-Icon):
-                // Neue Instanz erstellen
-                ExplorerApp app = new ExplorerApp();
-                app.setPath(f);
-                openApp(app);
-            }
-
-        // 2. JAR-DATEIEN
         } else if (f.getName().toLowerCase().endsWith(".jar")) {
             String mainClass = null;
             boolean forceGui = false;
@@ -639,7 +626,7 @@ term.getInputField().postActionEvent();
             // Spezielle JAR prüfen
             if (f.getName().equalsIgnoreCase("Calculator.jar")) {
                 mainClass = "SuperCalculator";
-                forceGui = true; 
+                forceGui = true; // GUI erzwingen
             }
             if (f.getName().equalsIgnoreCase("TuiCalc.jar")) {
                 mainClass = "TuiCalc";
@@ -657,12 +644,13 @@ term.getInputField().postActionEvent();
                 if (mainClass == null || mainClass.trim().isEmpty()) return;
             }
 
-            // Start-Modus entscheiden
-            if (Boolean.TRUE.equals(forceGui)) {
+            if (forceGui == true) {
                 runJarGui(f, mainClass);
-            } else if (Boolean.FALSE.equals(forceGui)) {
+            } else if (forceGui == false) {
                 runJarInTerminal(f, mainClass);
-            } else {
+            } 
+            else {
+                // Abfrage, ob im Terminal gestartet werden soll
                 int result = JOptionPane.showConfirmDialog(
                     null,
                     "Soll die JAR im Terminal gestartet werden?",
@@ -677,17 +665,14 @@ term.getInputField().postActionEvent();
                 }
             }
 
-        // 3. JAVA-QUELLCODE
         } else if (f.getName().toLowerCase().endsWith(".java")) {
-            runJava(f); 
+            runJava(f); // Java-Dateien starten
 
-        // 4. BILDER
         } else if (f.getName().toLowerCase().endsWith(".png") ||
                    f.getName().toLowerCase().endsWith(".jpg") ||
                    f.getName().toLowerCase().endsWith(".jpeg")) {
             openApp(new ImageViewer(f));
 
-        // 5. ALLES ANDERE (Texteditor)
         } else {
             openApp(new TextEditor(f));
         }

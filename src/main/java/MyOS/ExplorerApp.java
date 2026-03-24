@@ -1,5 +1,6 @@
 package MyOS;
 
+
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -86,259 +87,67 @@ import javax.swing.event.InternalFrameEvent;
 import javax.tools.JavaCompiler;
 import javax.tools.ToolProvider;
 
-// ================= EXPLORER =================
-    public class ExplorerApp extends JInternalFrame {
-        private DefaultListModel<File> model = new DefaultListModel<>();
-        private JList<File> list = new JList<>(model);
-        private File currentPath = new File(Main.VM_DIR);
-        private static File fileClipboard = null;
-        private static boolean isCutOperation = false;
+// ================= TEXT EDITOR (ENHANCED) =================
+public class TextEditor extends JInternalFrame {
+    private JTextArea area;
+    private File currentFile;
 
-        public ExplorerApp() {
-            super("Explorer", true, true, true, true);
-            setSize(700, 500);
-            setLayout(new BorderLayout());
-            applyTheme(Main.currentTheme); // sofort Theme anwenden
+    public TextEditor() { this(null); }
+    public TextEditor(File f) {
+        super("Text Editor", true, true, true, true);
+        this.currentFile = f;
+        setSize(600, 500);
+        area = new JTextArea();
+        area.setFont(new Font("Monospaced", Font.PLAIN, 13));
+        area.setBackground(new Color(250, 250, 250));
 
-            list.addKeyListener(new KeyAdapter() {
-                public void keyPressed(KeyEvent e) {
-                    boolean isCmd = e.isControlDown() || e.isMetaDown();
-                    if (isCmd && e.getKeyCode() == KeyEvent.VK_C) {
-                        fileClipboard = list.getSelectedValue();
-                        isCutOperation = false;
-                    } else if (isCmd && e.getKeyCode() == KeyEvent.VK_X) {
-                        fileClipboard = list.getSelectedValue();
-                        isCutOperation = true;
-                    } else if (isCmd && e.getKeyCode() == KeyEvent.VK_V) {
-                        pasteFile();
-                    } else if (e.getKeyCode() == KeyEvent.VK_DELETE) {
-                        File f = list.getSelectedValue();
-                        if(f != null && f.delete()) refresh();
-                    }
-                }
-            });
+        JToolBar toolBar = new JToolBar();
+        JButton loadBtn = new JButton("[LOAD] Oeffnen");
+        JButton saveBtn = new JButton("[SAVE] Speichern");
+        JButton clearBtn = new JButton("[CLEAR]");
 
-            list.addMouseListener(new MouseAdapter() {
-                public void mousePressed(MouseEvent e) { handleContextMenu(e); }
-                public void mouseReleased(MouseEvent e) { handleContextMenu(e); }
-                public void mouseClicked(MouseEvent e) { if(e.getClickCount() == 2) openFile(); }
-            });
+        loadBtn.addActionListener(e -> loadAction());
+        saveBtn.addActionListener(e -> saveAction());
+        clearBtn.addActionListener(e -> area.setText(""));
 
-            JButton backBtn = new JButton("[BACK] Zurueck");
-            backBtn.addActionListener(e -> {
-                if(currentPath.getParentFile() != null && currentPath.getPath().contains(Main.VM_DIR)) {
-                    currentPath = currentPath.getParentFile(); refresh();
-                }
-            });
+        toolBar.add(loadBtn); toolBar.add(saveBtn); toolBar.addSeparator(); toolBar.add(clearBtn);
 
-            add(backBtn, BorderLayout.NORTH);
-            add(new JScrollPane(list), BorderLayout.CENTER);
+        if(f != null) loadFile(f);
 
-            JPanel bottom = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-            JButton openBtn = new JButton("[OPEN] Datei Oeffnen");
-            openBtn.addActionListener(e -> openFile());
-            bottom.add(openBtn);
-            add(bottom, BorderLayout.SOUTH);
+        add(toolBar, BorderLayout.NORTH);
+        add(new JScrollPane(area), BorderLayout.CENTER);
 
-            refresh();
-        }
-
-        public void setPath(File path) {
-            this.currentPath = path;
-            refresh();
-        }
-
-        private void handleContextMenu(MouseEvent e) {
-            if(e.isPopupTrigger()) {
-                int idx = list.locationToIndex(e.getPoint());
-                JPopupMenu menu = new JPopupMenu();
-
-                if(idx != -1 && list.getCellBounds(idx, idx).contains(e.getPoint())) {
-                    list.setSelectedIndex(idx);
-                    File f = list.getSelectedValue();
-
-                    menu.add(new JMenuItem(new AbstractAction("Kopieren") {
-                        public void actionPerformed(ActionEvent e) { fileClipboard = f; isCutOperation = false; }
-                    }));
-                    menu.add(new JMenuItem(new AbstractAction("Ausschneiden") {
-                        public void actionPerformed(ActionEvent e) { fileClipboard = f; isCutOperation = true; }
-                    }));
-
-                    if(f.getName().toLowerCase().endsWith(".png") || f.getName().toLowerCase().endsWith(".jpg")) {
-                        menu.add(new JMenuItem(new AbstractAction("Als Hintergrund setzen") {
-                            public void actionPerformed(ActionEvent e) { Main.setWallpaper(f.getAbsolutePath()); }
-                        }));
-                    }
-
-                    if(f.getName().toLowerCase().endsWith(".java")) {
-                        menu.add(new JMenuItem(new AbstractAction("Zu .jar kompilieren") {
-                            public void actionPerformed(ActionEvent e) { compileJavaToJar(f); }
-                        }));
-                    }
-
-                    menu.add(new JMenuItem(new AbstractAction("Verknuepfung auf Desktop") {
-                        public void actionPerformed(ActionEvent e) { 
-                            if (!Main.customShortcuts.contains(f)) {
-                                Main.customShortcuts.add(f);
-                                Main.saveSettings();
-                                Main.addDesktopIcon(f.getName(), 160, 40, evt -> Main.executeFile(f)); 
-                                Main.desktop.revalidate();
-                                Main.desktop.repaint();
-                            }
-                        }
-                    }));
-
-                    menu.add(new JMenuItem(new AbstractAction("Mit Main-Klasse starten") {
-    public void actionPerformed(ActionEvent e) {
-        Main.runJarAskMain(f);
+        // Status Bar
+        JLabel status = new JLabel(" Zeichensatz: UTF-8");
+        status.setBorder(new BevelBorder(BevelBorder.LOWERED));
+        add(status, BorderLayout.SOUTH);
     }
-}));
 
-                    menu.add(new JMenuItem(new AbstractAction("Loeschen") {
-                        public void actionPerformed(ActionEvent e) { if(f.delete()) refresh(); }
-                    }));
-                    menu.add(new JMenuItem(new AbstractAction("Umbenennen") {
-    public void actionPerformed(ActionEvent e) {
-        String newName = JOptionPane.showInputDialog(ExplorerApp.this, "Neuer Name:", f.getName());
-        if(newName != null && !newName.isEmpty()) {
-            File newFile = new File(f.getParent(), newName);
-            if(f.renameTo(newFile)) refresh();
-            else JOptionPane.showMessageDialog(ExplorerApp.this, "Fehler beim Umbenennen.");
+    private void loadAction() {
+        String name = JOptionPane.showInputDialog("Dateiname in " + Main.VM_DIR + " (z.B. test.txt):");
+        if(name != null) {
+            File f = new File(Main.VM_DIR, name);
+            if(f.exists()) loadFile(f);
+            else JOptionPane.showMessageDialog(this, "Datei nicht gefunden!");
         }
     }
-}));
 
-
-                } else {
-                    list.clearSelection();
-                    JMenu neuMenu = new JMenu("Neu");
-                    neuMenu.add(new JMenuItem(new AbstractAction("Datei") {
-                        public void actionPerformed(ActionEvent e) { createNew(false); }
-                    }));
-                    neuMenu.add(new JMenuItem(new AbstractAction("Ordner") {
-                        public void actionPerformed(ActionEvent e) { createNew(true); }
-                    }));
-                    menu.add(neuMenu);
-
-                    JMenuItem pasteItem = new JMenuItem(new AbstractAction("Einfuegen") {
-                        public void actionPerformed(ActionEvent e) { pasteFile(); }
-                    });
-                    pasteItem.setEnabled(fileClipboard != null);
-                    menu.add(pasteItem);
-                }
-                menu.show(e.getComponent(), e.getX(), e.getY());
-            }
-        }
-
-        private void createNew(boolean isDir) {
-            String name = JOptionPane.showInputDialog(this, "Name:");
-            if(name != null && !name.isEmpty()) {
-                File f = new File(currentPath, name);
-                try {
-                    if(isDir) f.mkdir(); else f.createNewFile();
-                    refresh();
-                } catch(IOException ex) { JOptionPane.showMessageDialog(this, "Fehler beim Erstellen."); }
-            }
-        }
-
-        private void compileJavaToJar(File javaFile) {
-            new Thread(() -> {
-                try {
-                    JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
-                    if(compiler == null) {
-                        SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(this, "Kein JDK gefunden (Compiler null)."));
-                        return;
-                    }
-                    int result = compiler.run(null, null, null, javaFile.getAbsolutePath());
-                    if(result == 0) {
-                        String classFileName = javaFile.getName().replace(".java", ".class");
-                        File classFile = new File(javaFile.getParent(), classFileName);
-                        File jarFile = new File(javaFile.getParent(), javaFile.getName().replace(".java", ".jar"));
-
-                        Manifest manifest = new Manifest();
-                        manifest.getMainAttributes().put(Attributes.Name.MANIFEST_VERSION, "1.0");
-
-                        try (JarOutputStream jos = new JarOutputStream(new FileOutputStream(jarFile), manifest)) {
-                            jos.putNextEntry(new JarEntry(classFileName));
-                            jos.write(Files.readAllBytes(classFile.toPath()));
-                            jos.closeEntry();
-                        }
-                        classFile.delete();
-                        SwingUtilities.invokeLater(() -> { refresh(); JOptionPane.showMessageDialog(this, "Jar erfolgreich erstellt!"); });
-                    } else {
-                        SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(this, "Kompilierungsfehler."));
-                    }
-                } catch(Exception ex) { 
-                    SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(this, "Fehler: " + ex.getMessage()));
-                }
-            }).start();
-        }
-
-        private void refresh() {
-            model.clear();
-            File[] fs = currentPath.listFiles();
-            if(fs != null) {
-                Arrays.sort(fs, (a,b) -> a.isDirectory() == b.isDirectory() ? a.getName().compareTo(b.getName()) : a.isDirectory() ? -1 : 1);
-                for(File f : fs) model.addElement(f);
-            }
-        }
-
-        private void openFile() {
-            File f = list.getSelectedValue();
-            if (f == null) return;
-
-            if (f.isDirectory()) {
-                // Wenn es ein Ordner ist: Im SELBEN Fenster öffnen!
-                setPath(f);
-            } else {
-                // Wenn es eine Datei ist: Normales Öffnen (App starten, Bild anzeigen etc.)
-                Main.executeFile(f);
-            }
-        }
-
-        private void pasteFile() {
-            if(fileClipboard == null) return;
-            try {
-                File dest = new File(currentPath, fileClipboard.getName());
-                if(dest.exists()) dest = new File(currentPath, "Kopie_" + fileClipboard.getName());
-
-                if(isCutOperation) {
-                    Files.move(fileClipboard.toPath(), dest.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                    fileClipboard = null; 
-                } else {
-                    Files.copy(fileClipboard.toPath(), dest.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                }
-                refresh();
-            } catch (IOException e) { JOptionPane.showMessageDialog(this, "Fehler beim Operation."); }
-        }
-
-        public void applyTheme(String theme) {
-    Color bg, fg;
-    switch(theme) {
-        case "Win95":
-            bg = new Color(192,192,192);
-            fg = Color.BLACK;
-            break;
-        case "Win10":
-            bg = new Color(30,30,30);
-            fg = Color.WHITE;
-            break;
-        case "macOS":
-            bg = new Color(230,230,230);
-            fg = Color.BLACK;
-            break;
-        case "Linux":
-            bg = new Color(48,10,36);
-            fg = Color.WHITE;
-            break;
-        default:
-            bg = new Color(30,30,30);
-            fg = Color.WHITE;
+    private void loadFile(File f) {
+        try {
+            currentFile = f;
+            area.setText(new String(Files.readAllBytes(f.toPath())));
+        } catch(Exception e){ JOptionPane.showMessageDialog(this, "Fehler beim Laden."); }
     }
-    list.setBackground(bg);
-    list.setForeground(fg);
-    list.setFont(new Font("SansSerif", Font.PLAIN, 12));
-    getContentPane().setBackground(bg);
+
+    private void saveAction() {
+        if(currentFile == null) {
+            String name = JOptionPane.showInputDialog("Speichern als:");
+            if(name == null) return;
+            currentFile = new File(Main.VM_DIR, name);
+        }
+        try {
+            Files.write(currentFile.toPath(), area.getText().getBytes());
+            JOptionPane.showMessageDialog(this, "Gespeichert!");
+        } catch(Exception ex){ JOptionPane.showMessageDialog(this, "Fehler beim Speichern."); }
+    }
 }
-
-    }
