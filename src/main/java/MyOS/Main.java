@@ -691,13 +691,15 @@ term.getInputField().postActionEvent();
 
             if(currentTheme.equals("macOS")) {
     switch (title.toLowerCase()) {
-        case "terminal": path = "resources/terminal.png"; break;
-        case "explorer": path = "resources/explorer.png"; break;
-        case "app store": path = "resources/store.jpeg"; break;
-        case "browser": path = "resources/browser.jpeg"; break;
+        case "terminal": path = "/resources/terminal.png"; break;
+        case "explorer": path = "/resources/explorer.png"; break;
+        case "app store": path = "/resources/store.jpeg"; break;
+        case "web browser": path = "/resources/browser.jpeg"; break;
         default:
-            if(title.endsWith(".jar")) path = "resources/jar.jpeg";
-            else path = "resources/file.png";
+            if(title.endsWith(".jar")) path = "/resources/jar.jpeg";
+            else path = "/resources/file.png";
+        System.out.println("Icon-Pfad: " + path);
+        
     }
             } else {
 
@@ -709,6 +711,7 @@ term.getInputField().postActionEvent();
         default:
             if(title.endsWith(".jar")) path = "/jar.jpeg";
             else path = "/file.png";
+        System.out.println("Icon-Pfad: " + path);
     }
     }
 

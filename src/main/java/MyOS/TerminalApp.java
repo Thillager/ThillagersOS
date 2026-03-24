@@ -92,9 +92,11 @@ public class TerminalApp extends JInternalFrame {
   private Process process;
   private BufferedWriter writer;
   private String lastCommand = "";
+    private File currentDir;
 
   public TerminalApp(File dir) {
       super("Terminal", true, true, true, true); // WICHTIG: Titel + Resizable, Closable, Maximizable, Iconifiable
+      this.currentDir = dir;
       setSize(600, 400);
 
       area = new JTextArea();
@@ -135,18 +137,6 @@ public class TerminalApp extends JInternalFrame {
           area.append("Fehler: " + e.getMessage());
       }
 
-      input.addActionListener(e -> {
-          try {
-              writer.write(input.getText());
-              writer.newLine();
-              writer.flush();
-              input.setText("");
-          } catch (Exception ex) {
-              area.append("Fehler beim Senden\n");
-          }
-      });
-
-      // Im Konstruktor von TerminalApp:
       input.addKeyListener(new KeyAdapter() {
           @Override
           public void keyPressed(KeyEvent e) {
@@ -160,22 +150,29 @@ public class TerminalApp extends JInternalFrame {
           }
       });
 
-      // WICHTIG: Im ActionListener (wenn Enter gedrückt wird) den Befehl speichern
       input.addActionListener(e -> {
-          String text = input.getText();
-          if (!text.isEmpty()) {
-              lastCommand = text; // Hier wird der Befehl für "Pfeil-hoch" gemerkt
+          String text = input.getText().trim();
+          if (text.isEmpty()) return;
+
+          lastCommand = text; // Befehl für "Pfeil-hoch" merken
+
+          // --- START CUSTOM COMMANDS ---
+          if (handleCustomCommands(text)) {
+              input.setText("");
+              return; // Wenn es ein eigener Befehl war, hier abbrechen
           }
+          // --- ENDE CUSTOM COMMANDS ---
+
+          // Normaler System-Befehl: An CMD/Bash weiterleiten
           try {
               writer.write(text);
               writer.newLine();
               writer.flush();
               input.setText("");
           } catch (Exception ex) {
-              area.append("Fehler beim Senden\n");
+              area.append("Fehler beim Senden: " + ex.getMessage() + "\n");
           }
       });
-
       setVisible(true); // WICHTIG: sonst wird Fenster nicht angezeigt
   }
 
@@ -192,6 +189,113 @@ public class TerminalApp extends JInternalFrame {
           }
       } catch (Exception e) {}
   }
+
+    private boolean handleCustomCommands(String command) {
+        // In Kleinschreibung umwandeln für einfachere Prüfung
+        String lowerCmd = command.toLowerCase();
+
+        if (lowerCmd.equals("hello")) {
+            area.append("> MyOS: Hallo! Ich bin dein Custom-Terminal.\n");
+            return true; // "true" sagt der App: Ich habe den Befehl verarbeitet.
+        }
+
+        if (lowerCmd.equals("clear") || lowerCmd.equals("cls")) {
+            area.setText(""); // Terminal leeren
+            return true;
+        }
+
+        if (lowerCmd.equals("version")) {
+            area.append("> Thillagers OS v1.0.1 (Build 2026)\n");
+            return true;
+        }
+
+        if (lowerCmd.startsWith("msg ")) {
+            String msg = command.substring(4);
+            JOptionPane.showMessageDialog(this, "Nachricht vom Terminal: " + msg);
+            return true;
+        }
+
+        if (lowerCmd.equals("help")) {
+            area.append("""
+                > MyOS Custom-Befehle:
+                > hello       - Grüßt dich
+                > clear/cls   - Terminal leeren
+                > version     - OS-Version anzeigen
+                > msg [Text]  - Nachricht anzeigen
+                > help        - Diese Hilfe
+                """);
+            return true;
+        }
+
+        if (lowerCmd.equals("explorer")) {
+            Main.openApp(new ExplorerApp());
+            return true;
+        }
+
+        if (lowerCmd.equals("Terminal")) {
+            Main.openApp(new TerminalApp(new File(Main.VM_DIR)));
+            return true;
+        }
+
+        if (lowerCmd.equals("Browser")) {
+            Main.openApp(new BrowserApp());
+            return true;
+        }
+
+        if (lowerCmd.equals("App Store")) {
+            Main.openApp(new AppStore());
+            return true;
+        }
+
+        if (lowerCmd.equals("Text Editor")) {
+            Main.openApp(new TextEditor());
+            return true;
+        }
+
+        if (lowerCmd.equals("exit")) {
+            dispose(); // Terminal schließen
+            return true;
+        }
+
+        if (lowerCmd.equals("shutdown")) {
+            Main.saveSettings();
+            System.exit(0);
+            return true;
+        }
+
+        if (lowerCmd.equals("where i?") || lowerCmd.equals("pwd") || lowerCmd.equals("where i")) {
+            //getAbsolutePath() gibt den vollen Pfad des Ordners zurück
+            area.append("Du bist in " + currentDir.getAbsolutePath() + "\n");
+            return true;
+        }
+
+
+        if (lowerCmd.startsWith("cd ")) {
+            String path = command.substring(3).trim();
+
+            File newDir;
+
+            if (path.equals("..")) {
+                newDir = currentDir.getParentFile();
+            } else {
+                newDir = new File(currentDir, path);
+            }
+
+            if (newDir != null && newDir.exists() && newDir.isDirectory()) {
+                currentDir = newDir;
+                area.append("Wechsel zu: " + currentDir.getAbsolutePath() + "\n");
+            } else {
+                area.append("Ordner nicht gefunden!\n");
+            }
+
+            return true;
+        }
+
+        // Wenn kein Treffer dabei war, false zurückgeben
+        return false;
+    }
+
+    
 }
 
 
