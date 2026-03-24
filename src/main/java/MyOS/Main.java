@@ -751,15 +751,41 @@ if (icon != null) {
 } else {
     img = new JLabel(labelText, SwingConstants.CENTER); // fallback
 }
+            String iconPath = systemProps.getProperty("icon_" + title);
+            if (iconPath != null && !iconPath.isEmpty()) {
+                File f = new File(iconPath);
+                if (f.exists()) {
+                    ImageIcon customIcon = new ImageIcon(iconPath);
+                    Image scaled = customIcon.getImage().getScaledInstance(48, 48, Image.SCALE_SMOOTH);
+                    img.setIcon(new ImageIcon(scaled));
+                }
+            }
 
+            
             img.setFont(new Font("Monospaced", Font.BOLD, 18));
             img.setForeground(textColor);
             img.setBorder(new LineBorder(textColor, 1));
 
+
+            JPopupMenu menu = new JPopupMenu();
+
+            JMenuItem deleteItem = new JMenuItem("Löschen");
+            JMenuItem changeIconItem = new JMenuItem("Icon ändern");
+
+            menu.add(deleteItem);
+            menu.add(changeIconItem);
+            
             MouseAdapter ma = new MouseAdapter() {
                 int pX, pY;
                 public void mouseClicked(MouseEvent e) { if (e.getClickCount() == 2 && action != null) action.actionPerformed(null); }
-                public void mousePressed(MouseEvent e) { pX = e.getX(); pY = e.getY(); }
+                public void mousePressed(MouseEvent e) {
+                    pX = e.getX();
+                    pY = e.getY();
+
+                    if (SwingUtilities.isRightMouseButton(e)) {
+                        menu.show(e.getComponent(), e.getX(), e.getY());
+                    }
+                }
                 public void mouseDragged(MouseEvent e) { 
                     Point pLoc = p.getLocation();
                     p.setLocation(pLoc.x + e.getX() - pX, pLoc.y + e.getY() - pY); 
@@ -767,6 +793,34 @@ if (icon != null) {
                 }
                 public void mouseReleased(MouseEvent e) { saveSettings(); }
             };
+
+
+            deleteItem.addActionListener(e -> {
+                desktop.remove(p);
+                customShortcuts.removeIf(file -> file.getName().equals(title));
+                saveSettings();
+                desktop.repaint();
+            });
+
+            changeIconItem.addActionListener(e -> {
+                javax.swing.JFileChooser chooser = new javax.swing.JFileChooser();
+                int result = chooser.showOpenDialog(null);
+
+                if (result == javax.swing.JFileChooser.APPROVE_OPTION) {
+                    File imgFile = chooser.getSelectedFile();
+
+                    try {
+                        ImageIcon newIcon = new ImageIcon(imgFile.getAbsolutePath());
+                        Image scaled = newIcon.getImage().getScaledInstance(48, 48, Image.SCALE_SMOOTH);
+                        img.setIcon(new ImageIcon(scaled));
+
+                        // Optional speichern (siehe unten)
+                        systemProps.setProperty("icon_" + title, imgFile.getAbsolutePath());
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                    }
+                }
+            });
 
             img.addMouseListener(ma);
             img.addMouseMotionListener(ma);
