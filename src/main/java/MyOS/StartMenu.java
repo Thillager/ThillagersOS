@@ -146,6 +146,23 @@ public class StartMenu extends JDialog {
       exitBtn.setFocusPainted(false);
       exitBtn.addActionListener(e -> { Main.saveSettings(); System.exit(0); });
 
+      // --- Restart Button ---
+      JButton restartBtn = new JButton("Neustarten");
+      restartBtn.setBackground(themeColorBackground());
+      restartBtn.setForeground(parent.textColor);
+      restartBtn.setFocusPainted(false);
+      restartBtn.addActionListener(e -> { 
+          Main.saveSettings(); 
+          try {
+              // 1. Neuen Prozess starten
+              Runtime.getRuntime().exec("java -jar MyOS.jar");
+          } catch (IOException ex) {
+              ex.printStackTrace();
+          }
+          // 2. Jetzt erst den alten Prozess beenden
+          System.exit(0); 
+      });
+
       // --- Aufbau ---
       add(searchField, BorderLayout.NORTH);
       add(new JScrollPane(resultsPanel), BorderLayout.CENTER);
@@ -154,6 +171,7 @@ public class StartMenu extends JDialog {
       south.setOpaque(false);
       south.add(themeBox, BorderLayout.CENTER);
       south.add(exitBtn, BorderLayout.SOUTH);
+      south.add(restartBtn, BorderLayout.NORTH);
       add(south, BorderLayout.SOUTH);
 
       // --- Apps laden ---
