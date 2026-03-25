@@ -156,6 +156,25 @@ public class ExplorerApp extends JInternalFrame {
                     menu.add(new JMenuItem(new AbstractAction("Zu .jar kompilieren") {
                         public void actionPerformed(ActionEvent e) { compileJavaToJar(f); }
                     }));
+
+                    menu.add(new JMenuItem(new AbstractAction("Als .illag packen") {
+                        public void actionPerformed(ActionEvent e) {
+                            Main.buildIllagFromJava(f);
+                            refresh();
+                        }
+                    }));
+                }
+
+                if (f.getName().toLowerCase().endsWith(".jar")) {
+                    menu.add(new JMenuItem(new AbstractAction("Als .illag packen") {
+                        public void actionPerformed(ActionEvent e) {
+                            String mainClass = JOptionPane.showInputDialog("Main-Klasse:");
+                            if (mainClass != null && !mainClass.isEmpty()) {
+                                Main.buildIllagFromJar(f, mainClass);
+                            }
+                            refresh();
+                        }
+                    }));
                 }
 
                 menu.add(new JMenuItem(new AbstractAction("Verknuepfung auf Desktop") {
@@ -253,30 +272,62 @@ public class ExplorerApp extends JInternalFrame {
             try {
                 JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
                 if (compiler == null) {
-                    SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(this, "Kein JDK gefunden (Compiler null)."));
+                    SwingUtilities.invokeLater(() ->
+                        JOptionPane.showMessageDialog(this, "Kein JDK gefunden (Compiler null).")
+                    );
                     return;
                 }
+
                 int result = compiler.run(null, null, null, javaFile.getAbsolutePath());
-                if (result == 0) {
-                    String classFileName = javaFile.getName().replace(".java", ".class");
-                    File classFile = new File(javaFile.getParent(), classFileName);
-                    File jarFile = new File(javaFile.getParent(), javaFile.getName().replace(".java", ".jar"));
+                if (result != 0) {
+                    SwingUtilities.invokeLater(() ->
+                        JOptionPane.showMessageDialog(this, "Kompilierungsfehler.")
+                    );
+                    return;
+                }
 
-                    Manifest manifest = new Manifest();
-                    manifest.getMainAttributes().put(Attributes.Name.MANIFEST_VERSION, "1.0");
+                // --- Schritt 1: Alle relevanten class-Dateien finden ---
+                File dir = javaFile.getParentFile();
+                String baseName = javaFile.getName().replace(".java", "");
 
-                    try (JarOutputStream jos = new JarOutputStream(new FileOutputStream(jarFile), manifest)) {
-                        jos.putNextEntry(new JarEntry(classFileName));
-                        jos.write(Files.readAllBytes(classFile.toPath()));
+                File[] classFiles = dir.listFiles((d, name) ->
+                    name.startsWith(baseName) && name.endsWith(".class")
+                );
+
+                if (classFiles == null || classFiles.length == 0) {
+                    SwingUtilities.invokeLater(() ->
+                        JOptionPane.showMessageDialog(this, "Keine .class Dateien gefunden!")
+                    );
+                    return;
+                }
+
+                // --- Schritt 2: Jar-Datei vorbereiten ---
+                File jarFile = new File(dir, baseName + ".jar");
+                Manifest manifest = new Manifest();
+                manifest.getMainAttributes().put(Attributes.Name.MANIFEST_VERSION, "1.0");
+                manifest.getMainAttributes().put(Attributes.Name.MAIN_CLASS, baseName);
+
+                // --- Schritt 3: Alle Klassen ins Jar schreiben ---
+                try (JarOutputStream jos = new JarOutputStream(new FileOutputStream(jarFile), manifest)) {
+                    for (File cf : classFiles) {
+                        jos.putNextEntry(new JarEntry(cf.getName()));
+                        jos.write(Files.readAllBytes(cf.toPath()));
                         jos.closeEntry();
                     }
-                    classFile.delete();
-                    SwingUtilities.invokeLater(() -> { refresh(); JOptionPane.showMessageDialog(this, "Jar erfolgreich erstellt!"); });
-                } else {
-                    SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(this, "Kompilierungsfehler."));
                 }
-            } catch (Exception ex) { 
-                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(this, "Fehler: " + ex.getMessage()));
+
+                // Optional: .class Dateien löschen
+                for (File cf : classFiles) cf.delete();
+
+                SwingUtilities.invokeLater(() -> {
+                    refresh();
+                    JOptionPane.showMessageDialog(this, "Jar erfolgreich erstellt!");
+                });
+
+            } catch (Exception ex) {
+                SwingUtilities.invokeLater(() ->
+                    JOptionPane.showMessageDialog(this, "Fehler: " + ex.getMessage())
+                );
             }
         }).start();
     }
@@ -284,6 +335,7 @@ public class ExplorerApp extends JInternalFrame {
     private void refresh() {
         String fullPath = currentPath.getAbsolutePath();
 
+        model.clear();
         // Pfad für die Anzeige kürzen
         if (fullPath.contains("VM_Disk")) {
             // Findet den Index von "VM_Disk" und nimmt den Rest des Strings
@@ -293,7 +345,6 @@ public class ExplorerApp extends JInternalFrame {
             path.setText(fullPath);
         }
 
-        model.clear();
         File[] fs = currentPath.listFiles();
         if (fs != null) {
             Arrays.sort(fs, (a, b) -> a.isDirectory() == b.isDirectory() 

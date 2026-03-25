@@ -447,6 +447,20 @@ public class Main extends JFrame {
         }
     }
 
+    // Desktop-Illags
+    startX = 160;
+    startY = yOffset + 360;
+    if(files != null) {
+        for(File f : files) {
+            if(f.getName().endsWith(".illag")) {
+                addDesktopIcon(f.getName(), startX, startY, e -> executeFile(f));
+                startY += 120;
+                if(startY > screenHeight - 200) { startY = yOffset; startX += 120; }
+            }
+        }
+    }
+        
+
     // Benutzer-Shortcuts
     for(File f : customShortcuts) {
         if(f.exists()) {
@@ -612,6 +626,128 @@ term.getInputField().postActionEvent();
 }
 
 
+    public static void runIllag(File illagFile) {
+        try {
+            File tempDir = Files.createTempDirectory("illag_run").toFile();
+
+            // ENTpacken
+            try (JarFile jar = new JarFile(illagFile)) {
+                jar.stream().forEach(entry -> {
+                    try {
+                        File out = new File(tempDir, entry.getName());
+                        if (entry.isDirectory()) {
+                            out.mkdirs();
+                        } else {
+                            out.getParentFile().mkdirs();
+                            InputStream is = jar.getInputStream(entry);
+                            Files.copy(is, out.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                });
+            }
+
+            // CONFIG laden
+            Properties props = new Properties();
+            props.load(new FileInputStream(new File(tempDir, "config.properties")));
+
+            String mainClass = props.getProperty("main");
+            String mode = props.getProperty("mode");
+
+            // 🔥 JAVA MODE
+            if ("java".equals(mode)) {
+                File srcDir = new File(tempDir, "src");
+
+                JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
+                if (compiler == null) {
+                    JOptionPane.showMessageDialog(null, "Kein JDK gefunden!");
+                    return;
+                }
+
+                File[] javaFiles = srcDir.listFiles((d, n) -> n.endsWith(".java"));
+                for (File jf : javaFiles) {
+                    compiler.run(null, null, null, jf.getAbsolutePath());
+                }
+
+                TerminalApp term = new TerminalApp(srcDir);
+                Main.openApp(term);
+
+                // Command ins Terminal schicken
+                SwingUtilities.invokeLater(() -> {
+                    term.getInputField().setText("java " + mainClass);
+                    term.getInputField().postActionEvent();
+                });
+            }
+
+            // 🔥 JAR MODE
+            else if ("jar".equals(mode)) {
+                File jarFile = new File(tempDir, "app.jar");
+
+                TerminalApp term = new TerminalApp(tempDir);
+                Main.openApp(term);
+
+                SwingUtilities.invokeLater(() -> {
+                    term.getInputField().setText("java -cp app.jar " + mainClass);
+                    term.getInputField().postActionEvent();
+                });
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(null, "Fehler beim Starten der .illag Datei!");
+        }
+    }
+
+
+    public static void buildIllagFromJava(File javaFile) {
+        try {
+            File out = new File(javaFile.getParent(), javaFile.getName().replace(".java", ".illag"));
+
+            try (JarOutputStream jos = new JarOutputStream(new FileOutputStream(out))) {
+
+                // config
+                jos.putNextEntry(new JarEntry("config.properties"));
+                String config = "main=" + javaFile.getName().replace(".java", "") + "\nmode=java";
+                jos.write(config.getBytes());
+                jos.closeEntry();
+
+                // src
+                jos.putNextEntry(new JarEntry("src/" + javaFile.getName()));
+                jos.write(Files.readAllBytes(javaFile.toPath()));
+                jos.closeEntry();
+            }
+
+            JOptionPane.showMessageDialog(null, ".illag erfolgreich erstellt!");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+
+    public static void buildIllagFromJar(File jarFile, String mainClass) {
+        try {
+            File out = new File(jarFile.getParent(), jarFile.getName().replace(".jar", ".illag"));
+
+            try (JarOutputStream jos = new JarOutputStream(new FileOutputStream(out))) {
+
+                jos.putNextEntry(new JarEntry("config.properties"));
+                String config = "main=" + mainClass + "\nmode=jar";
+                jos.write(config.getBytes());
+                jos.closeEntry();
+
+                jos.putNextEntry(new JarEntry("app.jar"));
+                jos.write(Files.readAllBytes(jarFile.toPath()));
+                jos.closeEntry();
+            }
+
+            JOptionPane.showMessageDialog(null, ".illag erstellt!");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+
     public static void executeFile(File f) {
         if (f == null || !f.exists()) return;
 
@@ -669,6 +805,9 @@ term.getInputField().postActionEvent();
         } else if (f.getName().toLowerCase().endsWith(".java")) {
             runJava(f); // Java-Dateien starten
 
+        } else if (f.getName().toLowerCase().endsWith(".illag")) {
+            runIllag(f);
+            
         } else if (f.getName().toLowerCase().endsWith(".png") ||
                    f.getName().toLowerCase().endsWith(".jpg") ||
                    f.getName().toLowerCase().endsWith(".jpeg")) {
