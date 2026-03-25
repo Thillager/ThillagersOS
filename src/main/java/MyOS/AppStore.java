@@ -88,36 +88,70 @@ import javax.tools.ToolProvider;
 
 // ================= APP STORE =================
 public class AppStore extends JInternalFrame {
+
     public AppStore() {
         super("App Store", true, true, true, true);
         setSize(400, 500);
+
         JPanel listPanel = new JPanel();
         listPanel.setLayout(new BoxLayout(listPanel, BoxLayout.Y_AXIS));
+
+        // Hier fügst du deine Apps hinzu
         addAppEntry(listPanel, "Calculator", "https://github.com/Thillager/ThillagersOS/releases/download/Supercalc/SuperCalculator.2.jar");
+        addAppEntry(listPanel, "TuiCalc", "https://github.com/Thillager/ThillagersOS/releases/download/TuiCalc/TuiCalc.illag");
+
         add(new JScrollPane(listPanel), BorderLayout.CENTER);
+
         JButton custom = new JButton("URL installieren");
         custom.addActionListener(e -> {
             String url = JOptionPane.showInputDialog("Link:");
-            if(url != null) installApp(url.substring(url.lastIndexOf("/") + 1), url);
+            if (url != null && !url.isEmpty()) {
+                // Extrahiert den Namen nach dem letzten Slash
+                String fileName = url.substring(url.lastIndexOf("/") + 1);
+                installApp(fileName, url);
+            }
         });
         add(custom, BorderLayout.SOUTH);
     }
+
     private void addAppEntry(JPanel p, String name, String url) {
         JPanel row = new JPanel(new BorderLayout());
+        row.setBorder(new EmptyBorder(5, 5, 5, 5)); // Ein wenig Abstand
         row.add(new JLabel(name), BorderLayout.CENTER);
+
         JButton btn = new JButton("Install");
-        btn.addActionListener(e -> installApp(name.replace(" ", "") + ".jar", url));
+        btn.addActionListener(e -> {
+            // Extrahiert die Endung automatisch aus der URL
+            String fileName = url.substring(url.lastIndexOf("/") + 1);
+            installApp(fileName, url);
+        });
+
         row.add(btn, BorderLayout.EAST);
         p.add(row);
     }
+
     private void installApp(String fileName, String urlStr) {
         new Thread(() -> {
             try {
                 URL url = new URL(urlStr);
-                Files.copy(url.openStream(), new File(Main.VM_DIR, fileName).toPath(), StandardCopyOption.REPLACE_EXISTING);
-                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(this, "Installiert!"));
-            } catch(Exception ex) { SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(this, "Fehler")); }
+                // Nutzt das VM_DIR aus deiner Main-Klasse
+                File targetFile = new File(Main.VM_DIR, fileName);
+
+                // Verzeichnis erstellen, falls es nicht existiert
+                if (targetFile.getParentFile() != null && !targetFile.getParentFile().exists()) {
+                    targetFile.getParentFile().mkdirs();
+                }
+
+                // Download und Speichern
+                Files.copy(url.openStream(), targetFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+
+                SwingUtilities.invokeLater(() -> 
+                    JOptionPane.showMessageDialog(this, fileName + " wurde erfolgreich installiert!"));
+            } catch (Exception ex) { 
+                ex.printStackTrace();
+                SwingUtilities.invokeLater(() -> 
+                    JOptionPane.showMessageDialog(this, "Fehler beim Download von: " + fileName)); 
+            }
         }).start();
     }
 }
-
