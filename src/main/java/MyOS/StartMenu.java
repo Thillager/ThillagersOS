@@ -218,7 +218,7 @@ public class StartMenu extends JDialog {
       allApps.add(new AppEntry("Uwe", () -> Main.openApp(new Uwe())));
       allApps.add(new AppEntry("System Monitor", () -> Main.openApp(new SystemMonitorApp())));
       allApps.add(new AppEntry("Messenger", () -> Main.openApp(new Messenger())));
-        
+
 
       File dir = new File(Main.VM_DIR);
       File[] files = dir.listFiles();

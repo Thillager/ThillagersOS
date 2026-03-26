@@ -1,55 +1,92 @@
-package MyOS;
+    package MyOS;
 
-import javax.swing.*;
-import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
+    import javax.swing.*;
+    import java.awt.*;
+    import java.awt.event.ActionEvent;
+    import java.awt.event.ActionListener;
+    import java.awt.event.KeyAdapter;
+    import java.awt.event.KeyEvent;
 
-public class Messenger extends JInternalFrame {
-    private JTextArea chatArea;
-    private JTextField inputField;
+    public class Messenger extends JInternalFrame {
+        private JTextArea chatArea;
+        private JTextArea inputField; // Geändert von JTextField zu JTextArea
 
-    public Messenger() {
-        // Titel, Resizable, Closable, Maximizable, Iconifiable
-        super("Messenger", true, true, true, true);
-        setSize(400, 500);
-        setLayout(new BorderLayout());
+        public Messenger() {
+            // Titel, Resizable, Closable, Maximizable, Iconifiable
+            super("Messenger", true, true, true, true);
+            setSize(400, 500);
+            setLayout(new BorderLayout());
 
-        // 1. Chat-Verlauf (Oben/Mitte)
-        chatArea = new JTextArea();
-        chatArea.setEditable(false); // Nutzer soll hier nicht direkt tippen
-        chatArea.setLineWrap(true);
-        add(new JScrollPane(chatArea), BorderLayout.CENTER);
+            // 1. Chat-Verlauf (Oben/Mitte)
+            chatArea = new JTextArea();
+            chatArea.setEditable(false);
+            chatArea.setLineWrap(true);
+            chatArea.setWrapStyleWord(true);
+            add(new JScrollPane(chatArea), BorderLayout.CENTER);
 
-        // 2. Eingabe-Bereich (Unten)
-        JPanel bottomPanel = new JPanel(new BorderLayout());
-        inputField = new JTextField();
-        JButton sendButton = new JButton("Senden");
+            // 2. Eingabe-Bereich (Unten)
+            JPanel bottomPanel = new JPanel(new BorderLayout());
 
-        bottomPanel.add(inputField, BorderLayout.CENTER);
-        bottomPanel.add(sendButton, BorderLayout.EAST);
-        add(bottomPanel, BorderLayout.SOUTH);
+            inputField = new JTextArea(3, 20); // 3 Zeilen sichtbare Höhe
+            inputField.setLineWrap(true);
+            inputField.setWrapStyleWord(true);
 
-        // 3. Logik für den Button
-        ActionListener sendAction = new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                sendMessage();
+            // Scrollbar für das Eingabefeld, falls der Text sehr lang wird
+            JScrollPane inputScroll = new JScrollPane(inputField);
+
+            JButton sendButton = new JButton("Senden");
+
+            bottomPanel.add(inputScroll, BorderLayout.CENTER);
+            bottomPanel.add(sendButton, BorderLayout.EAST);
+            add(bottomPanel, BorderLayout.SOUTH);
+
+            // 3. Logik für das Senden
+            ActionListener sendAction = new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    sendMessage();
+                }
+            };
+
+            sendButton.addActionListener(sendAction);
+
+            // KeyListener, um Enter zum Senden zu nutzen
+            inputField.addKeyListener(new KeyAdapter() {
+                @Override
+                public void keyPressed(KeyEvent e) {
+                    if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                        if (e.isShiftDown()) {
+                            // Bei Shift + Enter: Normaler Zeilenumbruch
+                            inputField.append("\n");
+                        } else {
+                            // Bei nur Enter: Senden
+                            e.consume(); // Verhindert, dass ein Zeilenumbruch getippt wird
+                            sendMessage();
+                        }
+                    }
+                }
+            });
+
+            setVisible(true);
+        }
+
+        private void sendMessage() {
+            String text = inputField.getText().trim();
+
+            if (text.isEmpty()) {
+                return;
             }
-        };
 
-        sendButton.addActionListener(sendAction);
-        inputField.addActionListener(sendAction); // Senden bei Enter-Taste
+            // 1. Anzeige im GUI-Fenster (Chat-Area)
+            chatArea.append("Du:\n" + text + "\n\n");
+            chatArea.setCaretPosition(chatArea.getDocument().getLength());
 
-        setVisible(true);
-    }
-
-    private void sendMessage() {
-        String text = inputField.getText().trim();
-        if (!text.isEmpty()) {
-            chatArea.append("Du: " + text + "\n");
+            // 2. Ausgabe in die Konsole
+            System.out.println("--- Neue Nachricht ---");
             System.out.println(text);
-            inputField.setText(""); // Feld leeren
+            System.out.println("----------------------");
+
+            // Eingabefeld leeren
+            inputField.setText("");
         }
     }
-}
