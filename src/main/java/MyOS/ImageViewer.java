@@ -38,7 +38,8 @@ public class ImageViewer extends JInternalFrame {
 
             setupUI();
         } catch (IOException e) {
-            JOptionPane.showMessageDialog(this, "Fehler: " + e.getMessage());
+            JOptionPane.showMessageDialog(this, "Fehler: " + e.getMessage()); 
+            e.printStackTrace();
         }
 
         setSize(800, 600);

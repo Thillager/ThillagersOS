@@ -1,7 +1,8 @@
 package MyOS;
 
-import javax.swing.*;
-import java.awt.*;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.io.File;
 import java.net.URI;
@@ -11,6 +12,17 @@ import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
+
+import javax.swing.JButton;
+import javax.swing.JDesktopPane;
+import javax.swing.JFrame;
+import javax.swing.JInternalFrame;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
+import javax.swing.JTextField;
+import javax.swing.SwingUtilities;
 
 public class Uwe extends JInternalFrame {
 
@@ -45,7 +57,8 @@ public class Uwe extends JInternalFrame {
         String quellCode = (srcFolder != null) ? scanSourceCode(srcFolder) : "Kein Quellcode gefunden.";
 
         // --- HIER DEINEN EIGENEN SYSTEM PROMPT ANPASSEN ---
-        String meinSystemPrompt = "Du bist Uwe, der ultimative Assistent für Thillagers OS. " +     "Du bist ernst, aber extrem kompetent. " +     "Du duzt den Entwickler und du bist höflich und nett. " +     "Wenn du Code schreibst, erkläre immer kurz, warum du es so gemacht hast. " +     "Du bist im Kontext eines eigenen Betriebssystems (Thillagers OS) angegliedert, das aus einer Reihe von eigenständigen Java‑Applikationen besteht (Browser, TextEditor, Explorer, SystemMonitor, AppStore, Terminal usw.). " + "Antworte immer so verständlich, aber auch kurz wie möglich" + "Deine Antowort sollte nie Markdown enthalten und nutze nur Zeiche, die auf einer standard deutschen Tastatur zu finden sind.";
+        String meinSystemPrompt = "Du bist Uwe, der ultimative Assistent für Thillagers OS. " +     "Du bist ernst, aber extrem kompetent. " +     "Du duzt den Entwickler und du bist höflich und nett. " +     "Wenn du Code schreibst, erkläre immer kurz, warum du es so gemacht hast. " +     "Du bist im Kontext eines eigenen Betriebssystems (Thillagers OS) angegliedert, das aus einer Reihe von eigenständigen Java‑Applikationen besteht (Browser, TextEditor, Explorer, SystemMonitor, AppStore, Terminal usw.). " + "Antworte immer so verständlich, aber auch kurz wie möglich" + "Deine Antowort sollte nie Markdown enthalten und nutze nur Zeiche, die auf einer standard deutschen Tastatur zu finden sind." 
+        + "Analysiere den Code genau, damit du keine falschen informationen über den Code gibst!"  + "Hier ist der aktuelle Code von Thillagers OS, damit du immer den vollen Überblick hast:\n\n";
         // --------------------------------------------------
 
         // Wir kombinieren deine Anweisungen mit dem Wissen über den Code
@@ -105,7 +118,10 @@ public class Uwe extends JInternalFrame {
                 try {
                     sb.append("\n--- ").append(f.getName()).append(" ---\n");
                     sb.append(Files.readString(f.toPath())).append("\n");
-                } catch (Exception e) { }
+                } catch (Exception e) {
+                    sb.append("Fehler beim Lesen von ").append(f.getName()).append(": ").append(e.getMessage()).append("\n");
+                    e.printStackTrace();
+                 }
             }
         }
         return sb.toString();

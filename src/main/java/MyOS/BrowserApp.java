@@ -159,6 +159,7 @@ new Thread(() -> {
         SwingUtilities.invokeLater(() -> {
             progress.setValue(0);
             JOptionPane.showMessageDialog(BrowserApp.this, "Fehler beim Download:\n" + ex.getMessage());
+            ex.printStackTrace();
         });
     }
 }).start();
@@ -172,6 +173,7 @@ private void loadURL(String urlStr) {
             displayPane.setPage(urlStr); // im internen Fenster laden
         } catch(Exception e) {
             SwingUtilities.invokeLater(() -> displayPane.setText("<html><body><h2>Fehler beim Laden</h2></body></html>"));
+            e.printStackTrace();
         }
     }).start();
 }

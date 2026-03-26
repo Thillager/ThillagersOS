@@ -135,6 +135,7 @@ public class TerminalApp extends JInternalFrame {
 
       } catch (Exception e) {
           area.append("Fehler: " + e.getMessage());
+            e.printStackTrace();
       }
 
       input.addKeyListener(new KeyAdapter() {
@@ -171,6 +172,7 @@ public class TerminalApp extends JInternalFrame {
               input.setText("");
           } catch (Exception ex) {
               area.append("Fehler beim Senden: " + ex.getMessage() + "\n");
+                ex.printStackTrace();
           }
       });
       setVisible(true); // WICHTIG: sonst wird Fenster nicht angezeigt
@@ -187,7 +189,10 @@ public class TerminalApp extends JInternalFrame {
               String l = line;
               SwingUtilities.invokeLater(() -> area.append(l + "\n"));
           }
-      } catch (Exception e) {}
+      } catch (Exception e) {
+            SwingUtilities.invokeLater(() -> area.append("Fehler beim Lesen: " + e.getMessage() + "\n"));
+                e.printStackTrace();
+      }
   }
 
     private boolean handleCustomCommands(String command) {
@@ -228,27 +233,27 @@ public class TerminalApp extends JInternalFrame {
         }
 
         if (lowerCmd.equals("explorer")) {
-            Main.openApp(new ExplorerApp());
+            Main.windowManager.openApp(new ExplorerApp());
             return true;
         }
 
         if (lowerCmd.equals("terminal")) {
-            Main.openApp(new TerminalApp(new File(Main.VM_DIR)));
+            Main.windowManager.openApp(new TerminalApp(new File(Main.VM_DIR)));
             return true;
         }
 
         if (lowerCmd.equals("browser")) {
-            Main.openApp(new BrowserApp());
+            Main.windowManager.openApp(new BrowserApp());
             return true;
         }
 
         if (lowerCmd.equals("app store")) {
-            Main.openApp(new AppStore());
+            Main.windowManager.openApp(new AppStore());
             return true;
         }
 
         if (lowerCmd.equals("text editor")) {
-            Main.openApp(new TextEditor());
+            Main.windowManager.openApp(new TextEditor());
             return true;
         }
 
@@ -270,7 +275,7 @@ public class TerminalApp extends JInternalFrame {
         }
 
         if (lowerCmd.equals("uwe")) {
-            Main.openApp(new Uwe());
+            Main.windowManager.openApp(new Uwe());
         }
 
 

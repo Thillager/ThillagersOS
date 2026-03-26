@@ -199,7 +199,7 @@ public class ExplorerApp extends JInternalFrame {
                     public void actionPerformed(ActionEvent e) {
                         // Wenn es ein Ordner ist, nimm ihn direkt, sonst den Parent
                         File targetDir = f.isDirectory() ? f : f.getParentFile();
-                        Main.openApp(new TerminalApp(targetDir));
+                        Main.windowManager.openApp(new TerminalApp(targetDir));
                     }
                 }));
 
@@ -245,7 +245,7 @@ public class ExplorerApp extends JInternalFrame {
 
                 menu.add(new JMenuItem(new AbstractAction("Terminal hier öffnen") {
                     public void actionPerformed(ActionEvent e) {
-                        Main.openApp(new TerminalApp(currentPath));
+                        Main.windowManager.openApp(new TerminalApp(currentPath));
                     }
                 }));
                 
@@ -263,7 +263,9 @@ public class ExplorerApp extends JInternalFrame {
             try {
                 if (isDir) f.mkdir(); else f.createNewFile();
                 refresh();
-            } catch (IOException ex) { JOptionPane.showMessageDialog(this, "Fehler beim Erstellen."); }
+            } catch (IOException ex) { JOptionPane.showMessageDialog(this, "Fehler beim Erstellen."); 
+                ex.printStackTrace();
+            }
         }
     }
 
@@ -328,6 +330,7 @@ public class ExplorerApp extends JInternalFrame {
                 SwingUtilities.invokeLater(() ->
                     JOptionPane.showMessageDialog(this, "Fehler: " + ex.getMessage())
                 );
+                ex.printStackTrace();
             }
         }).start();
     }
@@ -378,7 +381,7 @@ public class ExplorerApp extends JInternalFrame {
                 Files.copy(fileClipboard.toPath(), dest.toPath(), StandardCopyOption.REPLACE_EXISTING);
             }
             refresh();
-        } catch (IOException e) { JOptionPane.showMessageDialog(this, "Fehler beim Operation."); }
+        } catch (IOException e) { JOptionPane.showMessageDialog(this, "Fehler beim Operation."); e.printStackTrace(); }
     }
 
     public void applyTheme(String theme) {
