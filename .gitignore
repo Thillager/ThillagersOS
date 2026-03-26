@@ -32,3 +32,10 @@ system.cfg
 resources
 VM_Files
 VM_Disk
+VM_Disk/
+
+.classpath
+.settings
+.settings/
+.github
+.github/
