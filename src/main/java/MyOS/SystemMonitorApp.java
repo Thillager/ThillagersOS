@@ -124,11 +124,7 @@ public class SystemMonitorApp extends JInternalFrame {
     class GraphPanel extends JPanel {
         private ArrayList<Integer> values = new ArrayList<>();
 
-        public void addValue(int val) {
-            values.add(val);
-            if (values.size() > 20) values.remove(0); // Zeigt die letzten 20 Sekunden
-            repaint();
-        }
+        public synchronized void addValue(int val) {   if (values.size()>20) values.remove(0);   values.add(val);   repaint();   }  
 
         @Override
         protected void paintComponent(Graphics g) {

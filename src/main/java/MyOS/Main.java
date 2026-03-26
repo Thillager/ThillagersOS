@@ -328,8 +328,12 @@ public class Main extends JFrame {
             Process proc = pb.start();
 
             // 2. OUTPUT-BRIDGE: Streams vom JAR lesen und im Terminal anzeigen
-            new Thread(() -> term.readStream(proc.getInputStream())).start();
-            new Thread(() -> term.readStream(proc.getErrorStream())).start();
+            new Thread(() -> {
+                term.readStream(proc.getInputStream());
+            }).start();
+            new Thread(() -> {
+                term.readStream(proc.getErrorStream());
+            }).start();
 
             // 3. INPUT-BRIDGE: Eingaben vom Terminal-Textfeld an das JAR senden
             // Wir brauchen einen Writer, um in den "Standard-In" des JARs zu schreiben
