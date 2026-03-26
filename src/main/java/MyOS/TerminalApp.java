@@ -269,6 +269,10 @@ public class TerminalApp extends JInternalFrame {
             return true;
         }
 
+        if (lowerCmd.equals("uwe")) {
+            Main.openApp(new Uwe());
+        }
+
 
         if (lowerCmd.startsWith("cd ")) {
             String path = command.substring(3).trim();
