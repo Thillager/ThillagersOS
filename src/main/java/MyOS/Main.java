@@ -39,6 +39,7 @@ import java.util.Properties;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.jar.JarOutputStream;
+import MyOS.SettingsApp;
 
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
@@ -86,6 +87,9 @@ public class Main extends JFrame {
     public static Main instance;
 
     public static WindowManager windowManager;
+
+    public static boolean customTaskbarColor = false;
+    public static boolean customTextColor = false;
 
     public Main() {
         instance = this;
@@ -878,6 +882,7 @@ public class Main extends JFrame {
                 }
             }
 
+
             // Shortcuts relativ speichern
             StringBuilder sb = new StringBuilder();
             for (File f : customShortcuts) {
@@ -887,6 +892,9 @@ public class Main extends JFrame {
                 sb.append(relPath).append(";");
             }
             systemProps.setProperty("shortcuts", sb.toString());
+
+            systemProps.setProperty("customTaskbarColor", String.valueOf(customTaskbarColor));
+            systemProps.setProperty("customTextColor", String.valueOf(customTextColor));
 
             systemProps.store(out, "System Settings");
         } catch (IOException e) {
@@ -902,6 +910,20 @@ public class Main extends JFrame {
             wallpaperPath = wp.isEmpty() ? "" : new File(VM_DIR, wp).getAbsolutePath();
             timeOffsetMillis = Long.parseLong(systemProps.getProperty("timeOffset", "0"));
 
+            // Farben laden
+            String bg = systemProps.getProperty("bgColor");
+            if (bg != null) currentBg = SettingsApp.hexToColor(bg);
+
+            String tb = systemProps.getProperty("taskbarColor");
+            if (tb != null) taskbarColor = SettingsApp.hexToColor(tb);
+
+            String accent = systemProps.getProperty("accentColor");
+            if (accent != null) accentColor = SettingsApp.hexToColor(accent);
+
+            String textCol = systemProps.getProperty("textColor");
+            if (textCol != null) textColor = SettingsApp.hexToColor(textCol);
+
+            // Shortcuts laden
             String sc = systemProps.getProperty("shortcuts", "");
             customShortcuts.clear();
             if (!sc.isEmpty()) {
@@ -910,6 +932,10 @@ public class Main extends JFrame {
                         customShortcuts.add(new File(VM_DIR, p));
                 }
             }
+
+            customTaskbarColor = Boolean.parseBoolean(systemProps.getProperty("customTaskbarColor", "false"));
+            customTextColor = Boolean.parseBoolean(systemProps.getProperty("customTextColor", "false"));
+            
         } catch (Exception e) {
             e.printStackTrace();
         }

@@ -55,8 +55,12 @@ public class ThemeManager {
 
         // ===== GLOBAL SETZEN =====
         Main.currentBg = bgColor;
-        Main.taskbarColor = taskbarBg;
-        Main.textColor = textCol;
+        if (!Main.customTaskbarColor) {
+            Main.taskbarColor = taskbarBg;
+        }
+        if (!Main.customTextColor) {
+            Main.textColor = textCol;
+        }
 
         if (Main.instance == null) return;
 
@@ -69,7 +73,13 @@ public class ThemeManager {
 
         // ===== TASKBAR =====
         if (Main.taskbar != null) {
-            Main.taskbar.setBackground(taskbarBg);
+
+            if (!Main.customTaskbarColor) {
+                Main.taskbarColor = taskbarBg;
+            }
+
+            // 🔥 Taskbar selbst setzen
+            Main.taskbar.setBackground(Main.taskbarColor);
 
             for (Component c : Main.taskbar.getComponents()) {
                 c.setForeground(textCol);
@@ -77,7 +87,9 @@ public class ThemeManager {
 
                 if (c instanceof JButton) {
                     JButton btn = (JButton) c;
-                    btn.setBackground(taskbarBg);
+
+                    // 🔥 WICHTIG: NICHT taskbarBg!
+                    btn.setBackground(Main.taskbarColor);
                     btn.setForeground(textCol);
                 }
             }
