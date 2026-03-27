@@ -113,11 +113,24 @@ public class AutoUpdate {
 
     private static void downloadRelease(String programName, String tag, File targetFile) throws Exception {
         String extension = targetFile.getName().endsWith(".illag") ? ".illag" : ".jar";
-        String downloadUrl = "https://github.com/Thillager/ThillagersOSResources/releases/download/" + tag + "/" + programName + extension;
+
+        // Wir bauen den Namen so, wie er auf GitHub ist (z.B. TuiCalcv2.0.illag)
+        String assetName = tag + extension; 
+        String downloadUrl = "https://github.com/Thillager/ThillagersOSResources/releases/download/" + tag + "/" + assetName;
 
         URL url = new URL(downloadUrl);
+
+        // Ziel-Pfad: Wir speichern die Datei am besten mit dem neuen Namen (inkl. Version)
+        // Damit extractVersionFromFilename beim nächsten Mal die v2.0 erkennt!
+        File newFile = new File(targetFile.getParent(), assetName);
+
         try (InputStream in = url.openStream()) {
-            Files.copy(in, targetFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            Files.copy(in, newFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+        }
+
+        // Die alte Datei löschen, wenn sie einen anderen Namen hatte
+        if (!targetFile.getName().equals(newFile.getName())) {
+            targetFile.delete();
         }
     }
 }
