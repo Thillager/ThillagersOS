@@ -1,181 +1,260 @@
 package MyOS;
 
+import javafx.application.Platform;
+import javafx.beans.value.ObservableValue;
+import javafx.concurrent.Worker;
+import javafx.embed.swing.JFXPanel;
+import javafx.scene.Scene;
+import javafx.scene.web.WebEngine;
+import javafx.scene.web.WebView;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.NodeList;
+import org.w3c.dom.events.EventListener;
+import org.w3c.dom.events.EventTarget;
 
-import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.Component;
-import java.awt.Cursor;
-import java.awt.Dimension;
-import java.awt.FlowLayout;
-import java.awt.Font;
-import java.awt.Graphics;
-import java.awt.GridLayout;
-import java.awt.Image;
-import java.awt.Point;
-import java.awt.Toolkit;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.ComponentAdapter;
-import java.awt.event.ComponentEvent;
-import java.awt.event.KeyAdapter;
-import java.awt.event.KeyEvent;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
+import javax.swing.*;
+import java.awt.*;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
+import java.net.HttpURLConnection;
 import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.StandardCopyOption;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.jar.Attributes;
-import java.util.jar.JarEntry;
-import java.util.jar.JarFile;
-import java.util.jar.JarOutputStream;
-import java.util.jar.Manifest;
 
-import javax.swing.AbstractAction;
-import javax.swing.BoxLayout;
-import javax.swing.DefaultListModel;
-import javax.swing.ImageIcon;
-import javax.swing.JButton;
-import javax.swing.JDesktopPane;
-import javax.swing.JDialog;
-import javax.swing.JEditorPane;
-import javax.swing.JFrame;
-import javax.swing.JInternalFrame;
-import javax.swing.JLabel;
-import javax.swing.JLayeredPane;
-import javax.swing.JList;
-import javax.swing.JMenu;
-import javax.swing.JMenuItem;
-import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import javax.swing.JPopupMenu;
-import javax.swing.JProgressBar;
-import javax.swing.JScrollPane;
-import javax.swing.JTextArea;
-import javax.swing.JTextField;
-import javax.swing.JToolBar;
-import javax.swing.SwingConstants;
-import javax.swing.SwingUtilities;
-import javax.swing.border.BevelBorder;
-import javax.swing.border.EmptyBorder;
-import javax.swing.border.LineBorder;
-import javax.swing.border.TitledBorder;
-import javax.swing.event.DocumentEvent;
-import javax.swing.event.DocumentListener;
-import javax.swing.event.InternalFrameAdapter;
-import javax.swing.event.InternalFrameEvent;
-import javax.tools.JavaCompiler;
-import javax.tools.ToolProvider;
-    
-// ================= BROWSER =================
 public class BrowserApp extends JInternalFrame {
-private JTextField urlField;
-private JButton goBtn, dlBtn;
-private JProgressBar progress;
-private JEditorPane displayPane;
 
-public BrowserApp() {
-    super("Web Browser", true, true, true, true);
-    setSize(800, 600);
-    setLayout(new BorderLayout());
+    private JFXPanel jfxPanel;
+    private WebEngine engine;
+    private JTextField urlField;
+    private JButton backBtn, forwardBtn, goBtn, refreshBtn;
 
-    // --- Top Panel: URL + Buttons ---
-    urlField = new JTextField("https://", 40);
-    goBtn = new JButton("[GO]");
-    dlBtn = new JButton("[DL]");
-    progress = new JProgressBar(0, 100);
+    // Liste der Dateiendungen, die als Download erkannt werden sollen
+    private static final List<String> DOWNLOADABLE_EXTENSIONS = Arrays.asList(
+        ".zip", ".jar", ".illag", ".exe", ".pdf", ".png", ".jpg", ".jpeg", ".gif", ".mp3", ".mp4", ".txt"
+    );
 
-    JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-    topPanel.add(urlField);
-    topPanel.add(goBtn);
-    topPanel.add(dlBtn);
-    topPanel.setBackground(new Color(60,60,60));
-    add(topPanel, BorderLayout.NORTH);
-    add(progress, BorderLayout.SOUTH);
+    public BrowserApp() {
+        super("Web Browser", true, true, true, true);
+        setSize(1000, 700);
+        setLayout(new BorderLayout());
 
-    // --- Display Panel ---
-    displayPane = new JEditorPane();
-    displayPane.setEditable(false);
-    displayPane.setContentType("text/html"); // HTML anzeigen
-    JScrollPane scrollPane = new JScrollPane(displayPane);
-    add(scrollPane, BorderLayout.CENTER);
+        jfxPanel = new JFXPanel();
+        add(jfxPanel, BorderLayout.CENTER);
 
-    // --- Styling ---
-    urlField.setBackground(Color.WHITE);
-    goBtn.setBackground(new Color(80,80,80));
-    goBtn.setForeground(Color.WHITE);
-    dlBtn.setBackground(new Color(80,80,80));
-    dlBtn.setForeground(Color.WHITE);
+        // GUI-Elemente (Swing)
+        JPanel topPanel = new JPanel(new BorderLayout());
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
 
-    // --- GO Button: Webseite anzeigen ---
-    goBtn.addActionListener(e -> loadURL(urlField.getText()));
+        backBtn = new JButton("<-");
+        forwardBtn = new JButton("->");
+        refreshBtn = new JButton("↻");
+        goBtn = new JButton("Go");
 
-    // --- Download Button ---
-    dlBtn.addActionListener(e -> {
-new Thread(() -> {
-    try {
-        URL url = new URL(urlField.getText());
-        String tempName = urlField.getText().substring(urlField.getText().lastIndexOf('/') + 1);
-        final String fileName = tempName.isEmpty() ? "dl_" + System.currentTimeMillis() : tempName;
+        urlField = new JTextField("https://www.google.com");
 
-        File targetFile = new File(Main.VM_DIR, fileName);
+        buttonPanel.add(backBtn);
+        buttonPanel.add(forwardBtn);
+        buttonPanel.add(refreshBtn);
 
-        // Download mit Stream
-        try (InputStream in = url.openStream(); 
-             OutputStream out = new FileOutputStream(targetFile)) {
-            byte[] buffer = new byte[4096];
-            int bytesRead;
-            while ((bytesRead = in.read(buffer)) != -1) {
-                out.write(buffer, 0, bytesRead);
+        topPanel.add(buttonPanel, BorderLayout.WEST);
+        topPanel.add(urlField, BorderLayout.CENTER);
+        topPanel.add(goBtn, BorderLayout.EAST);
+
+        add(topPanel, BorderLayout.NORTH);
+
+        // Initialisierung von JavaFX (muss auf dem Platform-Thread geschehen)
+        Platform.runLater(this::initFX);
+
+        // Button-Aktionen
+        goBtn.addActionListener(e -> loadURL(urlField.getText()));
+        urlField.addActionListener(e -> loadURL(urlField.getText())); // Ermöglicht das Drücken von "Enter"
+
+        backBtn.addActionListener(e -> Platform.runLater(() -> {
+            if (engine.getHistory().getCurrentIndex() > 0) {
+                engine.getHistory().go(-1);
+            }
+        }));
+
+        forwardBtn.addActionListener(e -> Platform.runLater(() -> {
+            if (engine.getHistory().getCurrentIndex() < engine.getHistory().getEntries().size() - 1) {
+                engine.getHistory().go(1);
+            }
+        }));
+
+        refreshBtn.addActionListener(e -> Platform.runLater(() -> engine.reload()));
+    }
+
+    private void initFX() {
+        WebView webView = new WebView();
+        engine = webView.getEngine();
+
+
+        // Listener für URL-Änderungen (Aktualisiert das Textfeld und fängt Downloads ab)
+        engine.locationProperty().addListener((observable, oldValue, newValue) -> {
+            SwingUtilities.invokeLater(() -> urlField.setText(newValue));
+
+            // SICHERHEIT 2: Lokalen Dateizugriff (file://) komplett blockieren
+            if (newValue.toLowerCase().startsWith("file://")) {
+                System.out.println("Sicherheit: Lokaler Dateizugriff blockiert -> " + newValue);
+                Platform.runLater(() -> engine.load(oldValue != null ? oldValue : "about:blank"));
+                SwingUtilities.invokeLater(() -> 
+                    JOptionPane.showMessageDialog(this, "Zugriff auf lokale Dateien ist aus Sicherheitsgründen gesperrt.", "Sicherheitswarnung", JOptionPane.WARNING_MESSAGE)
+                );
+                return;
+            }
+
+            checkAndDownload(newValue);
+        });
+
+        // Listener, um DOM-Klicks abzufangen (für direkte Links auf Dateien)
+        engine.getLoadWorker().stateProperty().addListener(
+            (ObservableValue<? extends Worker.State> ov, Worker.State oldState, Worker.State newState) -> {
+                if (newState == Worker.State.SUCCEEDED) {
+                    EventListener listener = ev -> {
+                        String href = ((Element) ev.getTarget()).getAttribute("href");
+                        if (href != null && !href.isEmpty()) {
+                            if (!href.startsWith("http")) {
+                                try {
+                                    URL base = new URL(engine.getLocation());
+                                    href = new URL(base, href).toString();
+                                } catch (Exception ignored) {}
+                            }
+
+                            if (isDownloadable(href)) {
+                                ev.preventDefault(); // Navigation im WebView stoppen
+                                String finalHref = href;
+                                SwingUtilities.invokeLater(() -> startDownload(finalHref));
+                            }
+                        }
+                    };
+
+                    Document doc = engine.getDocument();
+                    if (doc != null) {
+                        NodeList links = doc.getElementsByTagName("a");
+                        for (int i = 0; i < links.getLength(); i++) {
+                            ((EventTarget) links.item(i)).addEventListener("click", listener, false);
+                        }
+                    }
+                }
+            });
+
+        Scene scene = new Scene(webView);
+        jfxPanel.setScene(scene);
+
+        // Startseite laden
+        engine.load(urlField.getText());
+    }
+
+    private void loadURL(String url) {
+        if (!url.startsWith("http://") && !url.startsWith("https://")) {
+            url = "https://" + url;
+        }
+        final String finalUrl = url;
+        Platform.runLater(() -> engine.load(finalUrl));
+    }
+
+    private boolean isDownloadable(String url) {
+        String lowerUrl = url.toLowerCase();
+        for (String ext : DOWNLOADABLE_EXTENSIONS) {
+            if (lowerUrl.endsWith(ext) || lowerUrl.contains(ext + "?")) {
+                return true;
             }
         }
-
-        SwingUtilities.invokeLater(() -> {
-            progress.setValue(100);
-            JOptionPane.showMessageDialog(BrowserApp.this, "Download fertig: " + fileName);
-        });
-
-    } catch(Exception ex) {
-        SwingUtilities.invokeLater(() -> {
-            progress.setValue(0);
-            JOptionPane.showMessageDialog(BrowserApp.this, "Fehler beim Download:\n" + ex.getMessage());
-            ex.printStackTrace();
-        });
+        return false;
     }
-}).start();
-});
-}
 
-
-private void loadURL(String urlStr) {
-    new Thread(() -> {
-        try {
-            displayPane.setPage(urlStr); // im internen Fenster laden
-        } catch(Exception e) {
-            SwingUtilities.invokeLater(() -> displayPane.setText("<html><body><h2>Fehler beim Laden</h2></body></html>"));
-            e.printStackTrace();
+    private void checkAndDownload(String url) {
+        if (isDownloadable(url)) {
+            Platform.runLater(() -> {
+                if (engine.getHistory().getCurrentIndex() > 0) {
+                    engine.getHistory().go(-1); // Seite zurückspringen, damit man nicht auf einer weißen Seite festhängt
+                } else {
+                    engine.load("about:blank");
+                }
+            });
+            startDownload(url);
         }
-    }).start();
-}
-}
+    }
 
+    private void startDownload(String fileUrl) {
+        new Thread(() -> {
+            try {
+                URL url = new URL(fileUrl);
+                HttpURLConnection httpConn = (HttpURLConnection) url.openConnection();
+                httpConn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
+                int responseCode = httpConn.getResponseCode();
+
+                if (responseCode == HttpURLConnection.HTTP_OK) {
+                    String fileName = "";
+                    String disposition = httpConn.getHeaderField("Content-Disposition");
+
+                    if (disposition != null) {
+                        int index = disposition.indexOf("filename=");
+                        if (index > 0) {
+                            fileName = disposition.substring(index + 10, disposition.length() - 1);
+                        }
+                    } else {
+                        fileName = fileUrl.substring(fileUrl.lastIndexOf("/") + 1);
+                        if (fileName.contains("?")) {
+                            fileName = fileName.substring(0, fileName.indexOf("?"));
+                        }
+                    }
+
+                    // SICHERHEIT 3: Dateinamen bereinigen, um Path-Traversal ("../../") zu verhindern
+                    fileName = fileName.replaceAll("[^a-zA-Z0-9\\.\\-_]", "_"); 
+                    if (fileName.isEmpty()) {
+                        fileName = "download_" + System.currentTimeMillis();
+                    }
+
+                    // SICHERHEIT 4: Zielort zwingend auf VM_Disk festlegen
+                    File vmDir = new File(Main.VM_DIR);
+                    if (!vmDir.exists()) vmDir.mkdir();
+
+                    File saveFilePath = new File(vmDir, fileName);
+
+                    // SICHERHEIT 5: Dateikonflikte verhindern (Keine Dateien überschreiben)
+                    int counter = 1;
+                    while (saveFilePath.exists()) {
+                        int dotIndex = fileName.lastIndexOf(".");
+                        if (dotIndex > 0) {
+                            saveFilePath = new File(vmDir, fileName.substring(0, dotIndex) + "_" + counter + fileName.substring(dotIndex));
+                        } else {
+                            saveFilePath = new File(vmDir, fileName + "_" + counter);
+                        }
+                        counter++;
+                    }
+
+                    File finalPath = saveFilePath;
+                    SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(this, "Download gestartet:\n" + finalPath.getName(), "Download", JOptionPane.INFORMATION_MESSAGE));
+
+                    InputStream inputStream = httpConn.getInputStream();
+                    FileOutputStream outputStream = new FileOutputStream(finalPath);
+
+                    int bytesRead;
+                    byte[] buffer = new byte[4096];
+                    while ((bytesRead = inputStream.read(buffer)) != -1) {
+                        outputStream.write(buffer, 0, bytesRead);
+                    }
+
+                    outputStream.close();
+                    inputStream.close();
+
+                    SwingUtilities.invokeLater(() -> {
+                        JOptionPane.showMessageDialog(this, "Download erfolgreich!\nGespeichert in: " + finalPath.getAbsolutePath(), "Download", JOptionPane.INFORMATION_MESSAGE);
+                        Main.instance.desktop.repaint(); // Evtl. Explorer updaten, falls offen
+                    });
+
+                } else {
+                    System.out.println("Fehler beim Herunterladen. Server meldet HTTP Code: " + responseCode);
+                    SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(this, "Download fehlgeschlagen! HTTP Code: " + responseCode, "Fehler", JOptionPane.ERROR_MESSAGE));
+                }
+                httpConn.disconnect();
+            } catch (Exception ex) {
+                ex.printStackTrace();
+                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(this, "Download-Fehler: " + ex.getMessage(), "Fehler", JOptionPane.ERROR_MESSAGE));
+            }
+        }).start();
+    }
+}
