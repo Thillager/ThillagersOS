@@ -25,6 +25,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.net.URL;
+import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.text.SimpleDateFormat;
@@ -304,6 +305,40 @@ public class Main extends JFrame {
         } catch (Exception e) {
             e.printStackTrace();
             JOptionPane.showMessageDialog(null, "Fehler beim Starten!");
+        }
+    }
+
+    public static void runJarAsInternalApp(File jarFile, String className) {
+        try {
+            URL[] urls = { jarFile.toURI().toURL() };
+            URLClassLoader cl = new URLClassLoader(urls);
+
+            Class<?> cls = cl.loadClass(className);
+
+            Object obj = cls.getDeclaredConstructor().newInstance();
+
+            if (!(obj instanceof MyOS.api.MyOSApp)) {
+                JOptionPane.showMessageDialog(null, "Keine gültige ThillagersOS App!");
+                return;
+            }
+
+            MyOS.api.MyOSApp app = (MyOS.api.MyOSApp) obj;
+
+            JInternalFrame frame = new JInternalFrame(
+                    app.getAppName(),
+                    true, true, true, true
+            );
+
+            frame.setSize(600, 400);
+            frame.add(app.createUI());
+            frame.setVisible(true);
+
+            desktop.add(frame);
+            frame.setSelected(true);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(null, "Fehler beim Laden der App!");
         }
     }
 

@@ -156,12 +156,11 @@ public class StartMenu extends JDialog {
       allApps.add(new AppEntry("Messenger", () -> Main.windowManager.openApp(new Messenger())));
       allApps.add(new AppEntry("Settings", () -> Main.windowManager.openApp(new SettingsApp())));
       allApps.add(new AppEntry("Github", () -> Main.windowManager.openApp(new GithubApp())));
+      allApps.add(new AppEntry("TestApp", () -> {
+          File f = new File(Main.VM_DIR, "TestApp.jar");
+          Main.runJarAsInternalApp(f, "TestApp");
+      }));
     
-
-      File dir = new File(Main.VM_DIR);
-      File[] files = dir.listFiles();
-      if(files != null) for(File f : files) if(f.getName().endsWith(".jar")) 
-          allApps.add(new AppEntry(f.getName(), () -> Main.runJarAskMain(f)));
 
       updateResults("");
   }
