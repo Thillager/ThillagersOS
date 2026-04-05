@@ -856,7 +856,7 @@ public class Main extends JFrame {
         desktop.add(p);
     }
 
-    
+
 
     public static void saveSettings() {
         try (OutputStream out = new FileOutputStream("system.cfg")) {
@@ -936,7 +936,7 @@ public class Main extends JFrame {
 
             customTaskbarColor = Boolean.parseBoolean(systemProps.getProperty("customTaskbarColor", "false"));
             customTextColor = Boolean.parseBoolean(systemProps.getProperty("customTextColor", "false"));
-            
+
         } catch (Exception e) {
             e.printStackTrace();
         }
