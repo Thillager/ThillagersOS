@@ -14,6 +14,7 @@ public class SettingsApp extends JInternalFrame {
     private JTextField timeOffsetField;
     private JLabel wallpaperPreview;
     private JButton resetBtn;
+    private JCheckBox bootAnimCheck;
 
     public SettingsApp() {
         super("Einstellungen", true, true, true, true);
@@ -25,6 +26,14 @@ public class SettingsApp extends JInternalFrame {
         contentPane.setLayout(new GridLayout(0, 2, 10, 10));
         add(contentPane, BorderLayout.CENTER);
 
+        // ================= Boot Animation ===============
+        contentPane.add(new JLabel("Boot-Animation:"));
+        bootAnimCheck = new JCheckBox("Aktiviert");
+        bootAnimCheck.setSelected(Boolean.parseBoolean(
+            Main.systemProps.getProperty("bootAnim", "true")
+        ));
+        contentPane.add(bootAnimCheck);
+        
         // ================= THEME =================
         contentPane.add(new JLabel("Theme:"));
         themeCombo = new JComboBox<>(new String[] { "Win10", "Win95", "macOS", "Linux" });
@@ -166,6 +175,7 @@ public class SettingsApp extends JInternalFrame {
 
         // ===== SPEICHERN =====
         Main.saveSettings();
+        Main.systemProps.setProperty("bootAnim", String.valueOf(bootAnimCheck.isSelected()));
 
         JOptionPane.showMessageDialog(this, "Einstellungen gespeichert!");
         ThemeManager.applyTheme(Main.currentTheme);
