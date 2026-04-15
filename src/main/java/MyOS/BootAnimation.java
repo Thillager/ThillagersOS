@@ -31,7 +31,7 @@ public class BootAnimation extends JWindow {
                 // TEXT
                 g2.setColor(Color.RED);
                 g2.setFont(new Font("SansSerif", Font.BOLD, 42));
-                String text = "Thillagers OS";
+                String text = "Thillagers OS v3.0.0";
 
                 FontMetrics fm = g2.getFontMetrics();
                 int tx = (getWidth() - fm.stringWidth(text)) / 2;
