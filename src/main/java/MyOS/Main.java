@@ -25,6 +25,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.net.URL;
+import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.text.SimpleDateFormat;
@@ -40,6 +41,7 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.jar.JarOutputStream;
 import MyOS.SettingsApp;
+import MyOS.api.MyOSApp;
 
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
@@ -307,6 +309,40 @@ public class Main extends JFrame {
         }
     }
 
+    public static void runJarAsInternalApp(File jarFile, String className) {
+        try {
+            URL[] urls = { jarFile.toURI().toURL() };
+            URLClassLoader cl = new URLClassLoader(urls);
+
+            Class<?> cls = cl.loadClass(className);
+
+            Object obj = cls.getDeclaredConstructor().newInstance();
+
+            if (!(obj instanceof MyOS.api.MyOSApp)) {
+                JOptionPane.showMessageDialog(null, "Keine gültige ThillagersOS App!");
+                return;
+            }
+
+            MyOS.api.MyOSApp app = (MyOS.api.MyOSApp) obj;
+
+            JInternalFrame frame = new JInternalFrame(
+                    app.getAppName(),
+                    true, true, true, true
+            );
+
+            frame.setSize(600, 400);
+            frame.add(app.createUI());
+            frame.setVisible(true);
+
+            desktop.add(frame);
+            frame.setSelected(true);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(null, "Fehler beim Laden der App!");
+        }
+    }
+
     public static void runJar(File f) {
         try {
             ProcessBuilder pb = new ProcessBuilder("java", "-jar", f.getName());
@@ -460,43 +496,46 @@ public class Main extends JFrame {
             props.load(new FileInputStream(new File(tempDir, "config.properties")));
 
             String mainClass = props.getProperty("main");
-            String mode = props.getProperty("mode");
+            String mode = props.getProperty("mode", "ask"); // Standard: nachfragen
 
             if (mainClass == null || mainClass.isEmpty()) {
                 JOptionPane.showMessageDialog(null, "Keine Main-Klasse gefunden!");
                 return;
             }
 
-            // ===== KORREKTES STARTEN BASIEREND AUF MODE =====
+            // **NEUER MODE "internal" für MyOSApp**
             switch (mode.toLowerCase()) {
+                case "internal":
+                    // Direkt als Internal App starten
+                    File jarFile = new File(tempDir, "app.jar");
+                    if (jarFile.exists()) {
+                        runJarAsInternalApp(jarFile, mainClass);
+                    }
+                    break;
+
                 case "java":
-                    // GUI Java-Datei
                     File srcDir = new File(tempDir, "src");
                     File javaFile = new File(srcDir, mainClass + ".java");
                     if (javaFile.exists()) {
-                        runJava(javaFile); // nutzt schon runJava() für GUI oder Terminal
+                        runJava(javaFile);
                     } else {
-                        // Falls keine .java, evtl .jar erstellen
-                        File jarFile = new File(tempDir, "app.jar");
-                        if (jarFile.exists())
-                            runJarGui(jarFile, mainClass);
+                        File jarFile2 = new File(tempDir, "app.jar");
+                        if (jarFile2.exists())
+                            runJarGui(jarFile2, mainClass);
                     }
                     break;
 
                 case "jar":
-                    // GUI JAR
-                    File jarFile = new File(tempDir, "app.jar");
-                    if (jarFile.exists())
-                        runJarGui(jarFile, mainClass);
+                    File jarFile3 = new File(tempDir, "app.jar");
+                    if (jarFile3.exists())
+                        runJarGui(jarFile3, mainClass);
                     break;
 
                 case "terminal":
-                    // Terminal-Modus
-                    jarFile = new File(tempDir, "app.jar");
-                    if (jarFile.exists())
-                        runJarInTerminal(jarFile, mainClass);
+                    File jarFile4 = new File(tempDir, "app.jar");
+                    if (jarFile4.exists())
+                        runJarInTerminal(jarFile4, mainClass);
                     else {
-                        // Wenn es eine Java-Datei ist
                         srcDir = new File(tempDir, "src");
                         javaFile = new File(srcDir, mainClass + ".java");
                         if (javaFile.exists()) {
@@ -510,8 +549,44 @@ public class Main extends JFrame {
                     }
                     break;
 
-                default:
-                    JOptionPane.showMessageDialog(null, "Unbekannter Mode: " + mode);
+                default: // "ask" oder unbekannt
+                    // **FÜR .ILLAG: Gleiche Abfrage wie bei JAR**
+                    int choice = JOptionPane.showOptionDialog(
+                        null,
+                        "Wie soll die .illag App gestartet werden?\n\n" +
+                        "• Internal App: Läuft im OS-Fenster (MyOSApp API)\n" +
+                        "• Extern: Eigener JFrame-Prozess",
+                        "Illag-Start-Modus",
+                        JOptionPane.DEFAULT_OPTION,
+                        JOptionPane.QUESTION_MESSAGE,
+                        null,
+                        new String[]{"Internal App", "Extern (eigenes Fenster)"},
+                        "Internal App"
+                    );
+
+                    if (choice == JOptionPane.CLOSED_OPTION) return;
+
+                    if (choice == 0) { // Internal App
+                        File jarFile5 = new File(tempDir, "app.jar");
+                        if (jarFile5.exists()) {
+                            runJarAsInternalApp(jarFile5, mainClass);
+                        } else {
+                            JOptionPane.showMessageDialog(null, "Keine app.jar gefunden für Internal App!");
+                        }
+                    } else { // Extern
+                        int termChoice = JOptionPane.showConfirmDialog(
+                            null, "Terminal oder normales Fenster?", "Extern starten",
+                            JOptionPane.YES_NO_OPTION);
+                        if (termChoice == JOptionPane.YES_OPTION) {
+                            File jarFile6 = new File(tempDir, "app.jar");
+                            if (jarFile6.exists())
+                                runJarInTerminal(jarFile6, mainClass);
+                        } else {
+                            File jarFile7 = new File(tempDir, "app.jar");
+                            if (jarFile7.exists())
+                                runJarGui(jarFile7, mainClass);
+                        }
+                    }
                     break;
             }
 
@@ -521,75 +596,83 @@ public class Main extends JFrame {
         }
     }
 
+    // In compileJavaToJar() und buildIllagFromJar() - zusätzliche Option hinzufügen:
+
+    // **BEI JAVA → ILLAG:**
     public static void buildIllagFromJava(File javaFile) {
         try {
-            // Dialog: Terminal oder GUI
-            String[] options = { "GUI", "Terminal" };
+            String[] options = { "Internal App (MyOSApp)", "GUI", "Terminal" };
             int choice = JOptionPane.showOptionDialog(
                     null,
-                    "Soll die App im Terminal oder GUI laufen?",
-                    "Mode wählen",
+                    "Wie soll die App laufen?\n\n" +
+                    "• Internal App: Im OS-Fenster (MyOSApp API)\n" +
+                    "• GUI: Externes JFrame-Fenster\n" +
+                    "• Terminal: Konsolen-App",
+                    "Illag Mode wählen",
                     JOptionPane.DEFAULT_OPTION,
                     JOptionPane.QUESTION_MESSAGE,
                     null,
                     options,
                     options[0]);
 
-            String mode = (choice == 1) ? "terminal" : "java"; // "java" = GUI, "terminal" = Terminal
+            if (choice == JOptionPane.CLOSED_OPTION) return;
+
+            String mode = choice == 0 ? "internal" : (choice == 1 ? "java" : "terminal");
 
             File out = new File(javaFile.getParent(), javaFile.getName().replace(".java", ".illag"));
 
             try (JarOutputStream jos = new JarOutputStream(new FileOutputStream(out))) {
-                // config.properties erstellen
                 jos.putNextEntry(new JarEntry("config.properties"));
                 String config = "main=" + javaFile.getName().replace(".java", "") + "\nmode=" + mode;
                 jos.write(config.getBytes());
                 jos.closeEntry();
 
-                // src
                 jos.putNextEntry(new JarEntry("src/" + javaFile.getName()));
                 jos.write(Files.readAllBytes(javaFile.toPath()));
                 jos.closeEntry();
             }
 
-            JOptionPane.showMessageDialog(null, ".illag erfolgreich erstellt!");
+            JOptionPane.showMessageDialog(null, ".illag erstellt! Mode: " + mode);
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
+    // **BEI JAR → ILLAG:**
     public static void buildIllagFromJar(File jarFile, String mainClass) {
         try {
-            // Dialog: Terminal oder GUI
-            String[] options = { "GUI", "Terminal" };
+            String[] options = { "Internal App (MyOSApp)", "GUI", "Terminal" };
             int choice = JOptionPane.showOptionDialog(
                     null,
-                    "Soll die App im Terminal oder GUI laufen?",
-                    "Mode wählen",
+                    "Wie soll die App laufen?\n\n" +
+                    "• Internal App: Im OS-Fenster (MyOSApp API)\n" +
+                    "• GUI: Externes JFrame-Fenster\n" +
+                    "• Terminal: Konsolen-App",
+                    "Illag Mode wählen",
                     JOptionPane.DEFAULT_OPTION,
                     JOptionPane.QUESTION_MESSAGE,
                     null,
                     options,
                     options[0]);
 
-            String mode = (choice == 1) ? "terminal" : "jar"; // "jar" = GUI, "terminal" = Terminal
+            if (choice == JOptionPane.CLOSED_OPTION) return;
+
+            String mode = choice == 0 ? "internal" : (choice == 1 ? "jar" : "terminal");
 
             File out = new File(jarFile.getParent(), jarFile.getName().replace(".jar", ".illag"));
 
             try (JarOutputStream jos = new JarOutputStream(new FileOutputStream(out))) {
-                // config.properties erstellen
                 jos.putNextEntry(new JarEntry("config.properties"));
                 String config = "main=" + mainClass + "\nmode=" + mode;
                 jos.write(config.getBytes());
                 jos.closeEntry();
 
-                // app.jar hinzufügen
                 jos.putNextEntry(new JarEntry("app.jar"));
                 jos.write(Files.readAllBytes(jarFile.toPath()));
                 jos.closeEntry();
             }
 
-            JOptionPane.showMessageDialog(null, ".illag erfolgreich erstellt!");
+            JOptionPane.showMessageDialog(null, ".illag erstellt! Mode: " + mode);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -605,43 +688,44 @@ public class Main extends JFrame {
             windowManager.openApp(app);
 
         } else if (f.getName().toLowerCase().endsWith(".jar")) {
-            String mainClass = null;
-            boolean forceGui = false;
+            // **NEUE LOGIK: Erst fragen, ob InternalFrame oder extern**
+            int choice = JOptionPane.showOptionDialog(
+                null,
+                "Wie soll die JAR gestartet werden?\n\n" +
+                "• Internal App: Läuft im OS-Fenster (MyOSApp API)\n" +
+                "• Extern: Eigener JFrame-Prozess",
+                "JAR-Start-Modus",
+                JOptionPane.DEFAULT_OPTION,
+                JOptionPane.QUESTION_MESSAGE,
+                null,
+                new String[]{"Internal App", "Extern (eigenes Fenster)"},
+                "Internal App"
+            );
 
-            // Spezielle JAR prüfen
+            String mainClass = null;
+            if (choice == JOptionPane.CLOSED_OPTION) return;
+
+            // Spezielle JARs
             if (f.getName().equalsIgnoreCase("Calculator.jar")) {
                 mainClass = "SuperCalculator";
-                forceGui = true; // GUI erzwingen
             }
             if (f.getName().equalsIgnoreCase("TuiCalc.jar")) {
                 mainClass = "TuiCalc";
-                forceGui = false;
             }
 
-            // Wenn noch keine Main-Klasse gesetzt, vom Benutzer abfragen
             if (mainClass == null || mainClass.trim().isEmpty()) {
                 mainClass = JOptionPane.showInputDialog(
-                        null,
-                        "Main-Klasse eingeben (z.B. com.example.Main):",
-                        "Jar starten",
-                        JOptionPane.QUESTION_MESSAGE);
-                if (mainClass == null || mainClass.trim().isEmpty())
-                    return;
+                    null, "Main-Klasse eingeben (z.B. com.example.Main):", "Jar starten", JOptionPane.QUESTION_MESSAGE);
+                if (mainClass == null || mainClass.trim().isEmpty()) return;
             }
 
-            if (forceGui == true) {
-                runJarGui(f, mainClass);
-            } else if (forceGui == false) {
-                runJarInTerminal(f, mainClass);
-            } else {
-                // Abfrage, ob im Terminal gestartet werden soll
-                int result = JOptionPane.showConfirmDialog(
-                        null,
-                        "Soll die JAR im Terminal gestartet werden?",
-                        "Terminal starten?",
-                        JOptionPane.YES_NO_OPTION);
-
-                if (result == JOptionPane.YES_OPTION) {
+            if (choice == 0) { // Internal App
+                runJarAsInternalApp(f, mainClass);
+            } else { // Extern
+                int termChoice = JOptionPane.showConfirmDialog(
+                    null, "Soll die JAR im Terminal gestartet werden?", "Terminal starten?",
+                    JOptionPane.YES_NO_OPTION);
+                if (termChoice == JOptionPane.YES_OPTION) {
                     runJarInTerminal(f, mainClass);
                 } else {
                     runJarGui(f, mainClass);
@@ -649,7 +733,7 @@ public class Main extends JFrame {
             }
 
         } else if (f.getName().toLowerCase().endsWith(".java")) {
-            runJava(f); // Java-Dateien starten
+            runJava(f);
 
         } else if (f.getName().toLowerCase().endsWith(".illag")) {
             runIllag(f);
@@ -856,7 +940,7 @@ public class Main extends JFrame {
         desktop.add(p);
     }
 
-    
+
 
     public static void saveSettings() {
         try (OutputStream out = new FileOutputStream("system.cfg")) {
@@ -936,13 +1020,18 @@ public class Main extends JFrame {
 
             customTaskbarColor = Boolean.parseBoolean(systemProps.getProperty("customTaskbarColor", "false"));
             customTextColor = Boolean.parseBoolean(systemProps.getProperty("customTextColor", "false"));
-            
+
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
+    public static void preloadSettings() {
+        try (InputStream in = new FileInputStream("system.cfg")) {
+            systemProps.load(in);
+        } catch (Exception ignored) {}
+}
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> new Main().setVisible(true));
+        BootManager.boot();
     }
 }

@@ -119,6 +119,15 @@ public class ExplorerApp extends JInternalFrame {
         JPanel bottom = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         JButton openBtn = new JButton("[OPEN] Datei Oeffnen");
         openBtn.addActionListener(e -> openFile());
+
+        JButton neuBtn = new JButton("[NEW] Neue Datei");
+        neuBtn.addActionListener(e -> createNew(false));
+        bottom.add(neuBtn);
+
+        JButton neuOrdnerBtn = new JButton("[NEW FOLDER] Neuer Ordner");
+        neuOrdnerBtn.addActionListener(e -> createNew(true));
+        bottom.add(neuOrdnerBtn);
+        
         bottom.add(openBtn);
         add(bottom, BorderLayout.SOUTH);
 
