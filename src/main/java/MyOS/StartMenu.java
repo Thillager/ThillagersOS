@@ -164,7 +164,6 @@ public class StartMenu extends JDialog {
         // HIER: Deine MyIde einbinden
         // Beachte: MyIde muss ein JInternalFrame sein, damit openApp() funktioniert!
         allApps.add(new AppEntry("MyIde", () -> Main.windowManager.openApp(new MyIde())));
-        allApps.add(new AppEntry("SuperCalculator", () -> Main.windowManager.openApp(new CalculatorApp())));
 
         updateResults("");
     }
