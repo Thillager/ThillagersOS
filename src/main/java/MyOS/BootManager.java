@@ -7,14 +7,9 @@ import javax.swing.*;
 
 public class BootManager {
 
-    private static final String VERSION_URL =
-            "https://raw.githubusercontent.com/Thillager/ThillagersOS/main/version.txt";
-
-    private static final String JAR_URL =
-            "https://github.com/Thillager/ThillagersOS/releases/latest/download/ThillagersOS.jar";
-
     public static void boot() {
         preloadSettings();
+        AutoUpdate.checkUpdates();
 
         BootAnimation anim = new BootAnimation();
         anim.startAnimation();

@@ -191,7 +191,6 @@ public class Main extends JFrame {
         taskbar.add(timeLabel, BorderLayout.EAST);
         loadSettings();
         ThemeManager.applyTheme(currentTheme);
-        AutoUpdate.checkUpdates();
         if (!wallpaperPath.isEmpty())
             setWallpaper(wallpaperPath);
         // Position wird jetzt vom ComponentListener gesetzt
