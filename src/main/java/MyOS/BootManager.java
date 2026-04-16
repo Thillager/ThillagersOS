@@ -20,26 +20,7 @@ public class BootManager {
         anim.startAnimation();
 
         new Thread(() -> {
-
-            try {
-                anim.setProgress(10);
-
-                if (isUpdateAvailable()) {
-                    anim.setProgress(20);
-                    File newJar = downloadUpdate(anim);
-
-                    anim.setProgress(90);
-
-                    launchUpdater(newJar);
-                    return;
-                }
-
-                anim.setProgress(100);
-
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-
+            // Hier könnte noch eine Update-Prüfung stehen
             anim.finish(() -> startOS());
         }).start();
     }
@@ -55,57 +36,24 @@ public class BootManager {
         } catch (Exception ignored) {}
     }
 
-    private static boolean isUpdateAvailable() throws Exception {
-        String latest = new String(
-                new URL(VERSION_URL).openStream().readAllBytes()).trim();
+    /**
+     * Diese Methode korrigiert die losen Befehle am Ende deines Codes.
+     * Sie erstellt den ProcessBuilder 'pb', startet die neue Version 
+     * und beendet den aktuellen BootManager.
+     */
+    public static void restartWithNewVersion(String jarPath) {
+        try {
+            // Erstellt den Prozess, um die neue JAR zu starten
+            ProcessBuilder pb = new ProcessBuilder("java", "-jar", jarPath);
 
-        String current = Main.systemProps.getProperty("version", "1.0");
+            // Startet den neuen Prozess
+            pb.start();
 
-        return !latest.equals(current);
-    }
-
-    private static File downloadUpdate(BootAnimation anim) throws Exception {
-        URL url = new URL(JAR_URL);
-        InputStream in = url.openStream();
-
-        File outFile = new File("update.jar");
-        FileOutputStream out = new FileOutputStream(outFile);
-
-        byte[] buffer = new byte[4096];
-        int bytesRead;
-        int total = 0;
-
-        int fileSize = url.openConnection().getContentLength();
-
-        while ((bytesRead = in.read(buffer)) != -1) {
-            out.write(buffer, 0, bytesRead);
-            total += bytesRead;
-
-            int percent = (int)((total / (float)fileSize) * 60) + 20;
-            anim.setProgress(percent);
+            // Beendet die aktuelle Instanz (das alte OS)
+            System.exit(0);
+        } catch (IOException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(null, "Fehler beim Neustart: " + e.getMessage());
         }
-
-        in.close();
-        out.close();
-
-        return outFile;
-    }
-
-    private static void launchUpdater(File newJar) throws Exception {
-
-        String currentJar = new File(
-                BootManager.class.getProtectionDomain()
-                        .getCodeSource().getLocation().toURI()
-        ).getName();
-
-        ProcessBuilder pb = new ProcessBuilder(
-                "java", "-cp", currentJar,
-                "MyOS.Updater",
-                currentJar,
-                newJar.getName()
-        );
-
-        pb.start();
-        System.exit(0);
     }
 }

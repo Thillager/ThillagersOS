@@ -204,6 +204,53 @@ public class ExplorerApp extends JInternalFrame {
                     }
                 }));
 
+                menu.add(new JMenuItem(new AbstractAction("Als App starten") {
+                    public void actionPerformed(ActionEvent e) {
+                        Main.runJarAsInternalApp(f, f.getName().replace(".jar", ""));
+                    }
+                }));
+
+                menu.add(new JMenuItem(new AbstractAction("Als .jar ausfuehren") {
+                    public void actionPerformed(ActionEvent e) {
+                        Main.executeFile(f);
+                    }
+                }));
+
+                menu.add(new JMenuItem(new AbstractAction("Als .illag ausfuehren") {
+                    public void actionPerformed(ActionEvent e) {
+                        Main.executeFile(f);
+                    }
+                }));
+
+                if (f.isDirectory()) {
+
+                    boolean isJavaProject = false;
+                    try {
+                        isJavaProject = Files.walk(f.toPath())
+                            .anyMatch(p -> p.toString().endsWith(".java"));
+                    } catch (IOException ex) {
+                        ex.printStackTrace();
+                    }
+
+                    if (isJavaProject) {
+                        menu.add(new JMenuItem(new AbstractAction("Projekt zu .jar kompilieren") {
+                            public void actionPerformed(ActionEvent e) {
+                                String mainClass = JOptionPane.showInputDialog("Main-Klasse (z.B. MyOS.Main):");
+
+                                if (mainClass != null && !mainClass.isEmpty()) {
+                                    File jarFile = new File(f, f.getName() + ".jar");
+
+                                    Main.buildFullProjectJar(f, jarFile, mainClass);
+                                    refresh();
+                                }
+                            }
+                        }));
+                    }
+                }
+
+                
+                        
+
                 menu.add(new JMenuItem(new AbstractAction("Terminal hier öffnen") {
                     public void actionPerformed(ActionEvent e) {
                         // Wenn es ein Ordner ist, nimm ihn direkt, sonst den Parent

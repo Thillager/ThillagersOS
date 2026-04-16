@@ -37,9 +37,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.jar.Attributes;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.jar.JarOutputStream;
+import java.util.jar.Manifest;
+
 import MyOS.SettingsApp;
 import MyOS.api.MyOSApp;
 
@@ -677,6 +680,51 @@ public class Main extends JFrame {
             e.printStackTrace();
         }
     }
+
+
+    public static void buildFullProjectJar(File srcDir, File jarFile, String mainClass) {
+        try {
+            JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
+
+            List<String> files = new ArrayList<>();
+
+            Files.walk(srcDir.toPath())
+                .filter(p -> p.toString().endsWith(".java"))
+                .forEach(p -> files.add(p.toString()));
+
+            int result = compiler.run(null, null, null, files.toArray(new String[0]));
+            if (result != 0) {
+                System.out.println("Compile error!");
+                return;
+            }
+
+            Manifest manifest = new Manifest();
+            manifest.getMainAttributes().put(Attributes.Name.MANIFEST_VERSION, "1.0");
+            manifest.getMainAttributes().put(Attributes.Name.MAIN_CLASS, mainClass);
+
+            try (JarOutputStream jos = new JarOutputStream(new FileOutputStream(jarFile), manifest)) {
+
+                Files.walk(srcDir.toPath())
+                    .filter(p -> p.toString().endsWith(".class"))
+                    .forEach(p -> {
+                        try {
+                            String entry = srcDir.toPath().relativize(p).toString().replace("\\", "/");
+                            jos.putNextEntry(new JarEntry(entry));
+                            jos.write(Files.readAllBytes(p));
+                            jos.closeEntry();
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    });
+            }
+
+            System.out.println("JAR erstellt: " + jarFile.getName());
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+    
 
     public static void executeFile(File f) {
         if (f == null || !f.exists())

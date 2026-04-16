@@ -99,6 +99,7 @@ public class AppStore extends JInternalFrame {
         // Hier fügst du deine Apps hinzu
         addAppEntry(listPanel, "SuperCalcv1.0", "https://github.com/Thillager/ThillagersOSResources/releases/download/SuperCalcv1.0/SuperCalcv1.0.illag");
         addAppEntry(listPanel, "TuiCalcv1.0", "https://github.com/Thillager/ThillagersOS/releases/download/TuiCalc/TuiCalc.illag");
+        addAppEntry(listPanel, "CalculatorApp", "https://github.com/Thillager/ThillagersOSResources/releases/download/CalculatorApp/CalculatorApp.illag");
 
         add(new JScrollPane(listPanel), BorderLayout.CENTER);
 
