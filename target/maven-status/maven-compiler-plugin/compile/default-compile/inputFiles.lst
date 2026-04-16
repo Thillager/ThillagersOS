@@ -1,11 +1,16 @@
+/home/runner/workspace/src/main/java/MyOS/BootManager.java
+/home/runner/workspace/src/main/java/MyOS/GithubApp.java
+/home/runner/workspace/src/main/java/MyOS/MyIde.java
+/home/runner/workspace/src/main/java/MyOS/BootAnimation.java
 /home/runner/workspace/src/main/java/MyOS/SettingsApp.java
 /home/runner/workspace/src/main/java/MyOS/Main.java
-/home/runner/workspace/src/main/java/MyOS/ExplorerApp.java
 /home/runner/workspace/src/main/java/MyOS/ThemeManager.java
+/home/runner/workspace/src/main/java/MyOS/ExplorerApp.java
 /home/runner/workspace/src/main/java/MyOS/BrowserApp.java
 /home/runner/workspace/src/main/java/MyOS/StartMenu.java
 /home/runner/workspace/src/main/java/MyOS/ImageViewer.java
 /home/runner/workspace/src/main/java/MyOS/TextEditor.java
+/home/runner/workspace/src/main/java/MyOS/api/MyOSApp.java
 /home/runner/workspace/src/main/java/MyOS/Messenger.java
 /home/runner/workspace/src/main/java/MyOS/TerminalApp.java
 /home/runner/workspace/src/main/java/MyOS/AppStore.java
