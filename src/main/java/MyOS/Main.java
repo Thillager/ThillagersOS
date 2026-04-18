@@ -736,36 +736,79 @@ public class Main extends JFrame {
     }
 
 
-
     public static boolean checkSecurity(File f) {
-        File pluginFile = new File(VM_DIR, "SecurityManager.class");
+        File pluginFile = new File(VM_DIR, "SecurityShield.class");
 
-        // Wenn die Datei nicht existiert, ist das System "freiwillig" deaktiviert
+        // Falls das Shield-Plugin fehlt, ist das System "offen" (oder du gibst false zurück für Maximum Security)
         if (!pluginFile.exists()) {
             return true; 
         }
 
+        boolean isAllowed = false;
         try {
-            // Wir laden die Klasse dynamisch aus dem VM_Disk Ordner
             java.net.URL[] urls = { new File(VM_DIR).toURI().toURL() };
             try (java.net.URLClassLoader loader = new java.net.URLClassLoader(urls)) {
-                Class<?> cls = Class.forName("SecurityManager", true, loader);
-                java.lang.reflect.Method m = cls.getMethod("isAllowed", File.class);
-
-                // Führt die Prüfung im SecurityManager aus
-                return (Boolean) m.invoke(null, f);
+                Class<?> cls = Class.forName("SecurityShield", true, loader);
+                java.lang.reflect.Method m = cls.getMethod("allowExecution", File.class);
+                isAllowed = (Boolean) m.invoke(null, f);
             }
         } catch (Exception e) {
-            // Bei Fehlern im Plugin (z.B. Code-Fehler) erlauben wir die Ausführung trotzdem
-            System.err.println("Antivirus-Modul Fehler: " + e.getMessage());
+            System.err.println("Fehler beim Laden des SecurityShields: " + e.getMessage());
+            return true; // Im Fehlerfall sicherheitshalber erlauben
+        }
+
+        // Wenn das Shield die Datei bereits kennt (true), direkt erlauben
+        if (isAllowed) {
             return true;
+        }
+
+        // FALLS NICHT ERLAUBT: Dialog anzeigen
+        Object[] options = {"Whitelisten & Starten", "Abbrechen"};
+        int n = JOptionPane.showOptionDialog(null,
+            "Die Datei '" + f.getName() + "' ist nicht verifiziert.\n" +
+            "Möchten Sie diese Datei zur Whitelist hinzufügen und ausführen?",
+            "Security Warnung",
+            JOptionPane.YES_NO_OPTION,
+            JOptionPane.WARNING_MESSAGE,
+            null, options, options[1]);
+
+        if (n == JOptionPane.YES_OPTION) {
+            // Datei zur trust.db hinzufügen
+            whitelistFile(f);
+            return true;
+        }
+
+        return false;
+    }
+
+    private static void whitelistFile(File f) {
+        try {
+            // 1. Hash berechnen
+            java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-256");
+            try (java.io.FileInputStream fis = new java.io.FileInputStream(f)) {
+                byte[] data = new byte[1024];
+                int read;
+                while ((read = fis.read(data)) != -1) md.update(data, 0, read);
+            }
+            StringBuilder sb = new StringBuilder();
+            for (byte b : md.digest()) sb.append(String.format("%02x", b));
+            String hash = sb.toString();
+
+            // 2. In trust.db am Ende anfügen
+            File dbFile = new File(VM_DIR, "trust.db");
+            try (java.io.BufferedWriter writer = new java.io.BufferedWriter(new java.io.FileWriter(dbFile, true))) {
+                writer.write(hash);
+                writer.newLine();
+            }
+            System.out.println("Datei erfolgreich gewhitelistet: " + f.getName());
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(null, "Fehler beim Whitelisten: " + e.getMessage());
         }
     }
 
     public static void executeFile(File f) {
 
         if (!checkSecurity(f)) {
-            JOptionPane.showMessageDialog(null, "Blockiert durch Antivirus!");
             return;
         }
 
