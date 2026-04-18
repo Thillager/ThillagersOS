@@ -333,6 +333,17 @@ public class Main extends JFrame {
             );
 
             frame.setSize(600, 400);
+            int offset = windowOffset * 30;
+
+            frame.setLocation(50 + offset, 50 + offset);
+
+            // Offset erhöhen (für nächsten Window-Start)
+            windowOffset++;
+
+            // Reset wenn zu viele Fenster offen (sonst wandert es raus)
+            if (windowOffset > 10) {
+                windowOffset = 0;
+            }
             frame.add(app.createUI());
             frame.setVisible(true);
 
@@ -475,7 +486,7 @@ public class Main extends JFrame {
         try {
             File tempDir = Files.createTempDirectory("illag_run").toFile();
 
-            // ENTpacken
+            // Entpacken
             try (JarFile jar = new JarFile(illagFile)) {
                 jar.stream().forEach(entry -> {
                     try {
@@ -723,9 +734,30 @@ public class Main extends JFrame {
             e.printStackTrace();
         }
     }
-    
+
+
+    public static boolean checkSecurity(File f) {
+        try {
+            Class<?> cls = Class.forName("SecurityManager");
+            java.lang.reflect.Method m = cls.getMethod("isAllowed", File.class);
+            Object result = m.invoke(null, f);
+            return (Boolean) result;
+        } catch (ClassNotFoundException e) {
+            // Antivirus nicht installiert → alles erlauben
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return true; // im Zweifel NICHT blockieren
+        }
+    }
 
     public static void executeFile(File f) {
+
+        if (!checkSecurity(f)) {
+            JOptionPane.showMessageDialog(null, "Blockiert durch Antivirus!");
+            return;
+        }
+
         if (f == null || !f.exists())
             return;
 
