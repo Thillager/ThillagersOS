@@ -736,18 +736,29 @@ public class Main extends JFrame {
     }
 
 
+
     public static boolean checkSecurity(File f) {
+        File pluginFile = new File(VM_DIR, "SecurityManager.class");
+
+        // Wenn die Datei nicht existiert, ist das System "freiwillig" deaktiviert
+        if (!pluginFile.exists()) {
+            return true; 
+        }
+
         try {
-            Class<?> cls = Class.forName("SecurityManager");
-            java.lang.reflect.Method m = cls.getMethod("isAllowed", File.class);
-            Object result = m.invoke(null, f);
-            return (Boolean) result;
-        } catch (ClassNotFoundException e) {
-            // Antivirus nicht installiert → alles erlauben
-            return true;
+            // Wir laden die Klasse dynamisch aus dem VM_Disk Ordner
+            java.net.URL[] urls = { new File(VM_DIR).toURI().toURL() };
+            try (java.net.URLClassLoader loader = new java.net.URLClassLoader(urls)) {
+                Class<?> cls = Class.forName("SecurityManager", true, loader);
+                java.lang.reflect.Method m = cls.getMethod("isAllowed", File.class);
+
+                // Führt die Prüfung im SecurityManager aus
+                return (Boolean) m.invoke(null, f);
+            }
         } catch (Exception e) {
-            e.printStackTrace();
-            return true; // im Zweifel NICHT blockieren
+            // Bei Fehlern im Plugin (z.B. Code-Fehler) erlauben wir die Ausführung trotzdem
+            System.err.println("Antivirus-Modul Fehler: " + e.getMessage());
+            return true;
         }
     }
 
