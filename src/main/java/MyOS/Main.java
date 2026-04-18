@@ -16,6 +16,7 @@ import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
@@ -63,6 +64,7 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import javax.tools.JavaCompiler;
 import javax.tools.ToolProvider;
+import java.io.FileReader;
 
 // ================= MAIN OS CLASS =================
 public class Main extends JFrame {
@@ -735,9 +737,34 @@ public class Main extends JFrame {
         }
     }
 
+    private static boolean loadZeroTrustStatusFromConfig() {
+        File configFile = new File("VM_Disk/antivirus.conf");
+        if (!configFile.exists()) {
+            return false; // Default: Wenn keine Config da ist, ist ZeroTrust aus
+        }
+        try (BufferedReader reader = new BufferedReader(new FileReader(configFile))) {
+            String line = reader.readLine();
+            if (line != null) {
+                return Boolean.parseBoolean(line.trim());
+            }
+        } catch (Exception e) {
+            System.err.println("Fehler beim Laden der ZeroTrust Config: " + e.getMessage());
+        }
+        return false;
+    }
+
 
     public static boolean checkSecurity(File f) {
         File pluginFile = new File(VM_DIR, "SecurityShield.class");
+
+
+        // 1. Lade den aktuellen Status aus der Config
+        boolean isZeroTrustActive = loadZeroTrustStatusFromConfig(); 
+
+        // 2. WENN AUS, DANN IMMER ERLAUBEN (ohne Fragen!)
+        if (!isZeroTrustActive) {
+            return true; 
+        }
 
         // Falls das Shield-Plugin fehlt, ist das System "offen" (oder du gibst false zurück für Maximum Security)
         if (!pluginFile.exists()) {

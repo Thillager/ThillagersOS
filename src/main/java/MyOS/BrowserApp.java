@@ -39,7 +39,7 @@ public class BrowserApp extends JInternalFrame {
         add(jfxPanel, BorderLayout.CENTER);
 
         JPanel top = new JPanel(new BorderLayout());
-        JTextField field = new JTextField("https://example.com");
+        JTextField field = new JTextField("https://duckduckgo.com");
         urlField = field;
 
         JButton go = new JButton("Go");
