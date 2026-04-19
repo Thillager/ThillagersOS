@@ -9,13 +9,14 @@ public class BootManager {
 
     public static void boot() {
         preloadSettings();
+        System.out.println("updatehatversucht1");
         AutoUpdate.checkUpdates();
 
         BootAnimation anim = new BootAnimation();
         anim.startAnimation();
 
         new Thread(() -> {
-            // Hier könnte noch eine Update-Prüfung stehen
+            
             anim.finish(() -> startOS());
         }).start();
     }

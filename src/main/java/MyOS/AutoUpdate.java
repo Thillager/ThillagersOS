@@ -18,6 +18,7 @@ public class AutoUpdate {
     private static final String GITHUB_API_BASE = "https://api.github.com/repos/Thillager/ThillagersOSResources/releases";
 
     public static void checkUpdates() {
+        System.out.println("Update-Check gestartet...");
         File vmDir = new File(Main.VM_DIR);
         if (!vmDir.exists()) return;
 

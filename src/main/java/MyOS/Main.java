@@ -1191,50 +1191,53 @@ public class Main extends JFrame {
 }
     // In Main.java
 
-public static void main(String[] args) {
-    // 1. Boot-Animation sofort anzeigen
-    BootAnimation boot = new BootAnimation();
-    boot.startAnimation();
+    public static void main(String[] args) {
+        // 1. Boot-Animation sofort anzeigen
+        BootAnimation boot = new BootAnimation();
+        boot.startAnimation();
 
-    new Thread(() -> {
-        try {
-            // 2. Main-Fenster im Hintergrund erstellen
-            // Während der Balken lädt, bereitet Java das Fenster vor
-            final Main[] app = new Main[1];
-            
-            SwingUtilities.invokeAndWait(() -> {
-                app[0] = new Main();
-                // WICHTIG: Beide müssen undecorated sein für 0ms Übergang
-                app[0].setExtendedState(JFrame.MAXIMIZED_BOTH);
-                app[0].setVisible(false);
-            });
+        new Thread(() -> {
+            try {
+                // --- HIER DEN UPDATE-CHECK EINBAUEN ---
+                // Da wir in einem Thread sind, blockiert das nicht den Start der UI
+                System.out.println("Starte Update-Prüfung...");
+                AutoUpdate.checkUpdates();
+                System.out.println("Update-Prüfung beendet.");
+                // --------------------------------------
 
-            // 3. Lade-Simulation (3 Sekunden)
-            for (int i = 0; i <= 100; i++) {
-                final int p = i;
-                SwingUtilities.invokeLater(() -> boot.setProgress(p));
-                Thread.sleep(30); 
-            }
+                // 2. Main-Fenster im Hintergrund erstellen
+                final Main[] app = new Main[1];
 
-            // 4. DER TRICK: Erst Main zeigen, DANN Animation löschen
-            SwingUtilities.invokeLater(() -> {
-                app[0].setVisible(true); // Main erscheint HINTER der Animation
-                app[0].toFront();        // Main kommt nach vorne
-                
-                // Wir geben Main 100ms Zeit zum Rendern, bevor wir Boot killen
-                Timer transitionTimer = new Timer(100, e -> {
-                    boot.finish(() -> {
-                        // Animation wird jetzt ausgeblendet
-                        // Main ist bereits voll da
-                    });
+                SwingUtilities.invokeAndWait(() -> {
+                    app[0] = new Main();
+                    app[0].setExtendedState(JFrame.MAXIMIZED_BOTH);
+                    app[0].setVisible(false);
                 });
-                transitionTimer.setRepeats(false);
-                transitionTimer.start();
-            });
 
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }).start();
-}
+                // 3. Lade-Simulation (3 Sekunden)
+                for (int i = 0; i <= 100; i++) {
+                    final int p = i;
+                    SwingUtilities.invokeLater(() -> boot.setProgress(p));
+                    Thread.sleep(30); 
+                }
+
+                // 4. DER TRICK: Erst Main zeigen, DANN Animation löschen
+                SwingUtilities.invokeLater(() -> {
+                    app[0].setVisible(true);
+                    app[0].toFront();
+
+                    Timer transitionTimer = new Timer(100, e -> {
+                        boot.finish(() -> {
+                            // Animation wird beendet
+                        });
+                    });
+                    transitionTimer.setRepeats(false);
+                    transitionTimer.start();
+                });
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }).start();
+    }
 }
