@@ -161,10 +161,6 @@ public class StartMenu extends JDialog {
             Main.runJarAsInternalApp(f, "TestApp");
         }));
 
-        // HIER: Deine MyIde einbinden
-        // Beachte: MyIde muss ein JInternalFrame sein, damit openApp() funktioniert!
-        allApps.add(new AppEntry("MyIde", () -> Main.windowManager.openApp(new MyIde())));
-
         updateResults("");
     }
 
